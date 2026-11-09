@@ -71,7 +71,7 @@
     <string name="dv_diag_rpu">RPU converted: %1$d, errors: %2$d, EL units dropped: %3$d</string>
     <string name="dv_diag_error">Last error: %1$s</string>
     <string name="dv_diag_format">Video: %1$s (level %2$s), %3$dx%4$d, %5$s fps</string>
-    <string name="dv_diag_decoder">Decoder in use: %1$s (Dolby Vision decoder: %2$s)</string>
+    <string name="dv_diag_decoder">Decoder in use: %1$s (mode: %2$s)</string>
     <string name="dv_diag_display">Screen reports Dolby Vision: %1$s</string>
     <string name="dv_diag_device">Dolby Vision decoders of this device:</string>
     <string name="dv_diag_none">none</string>

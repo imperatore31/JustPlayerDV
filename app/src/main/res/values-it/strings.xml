@@ -70,7 +70,7 @@
     <string name="dv_diag_rpu">RPU convertiti: %1$d, errori: %2$d, unità EL scartate: %3$d</string>
     <string name="dv_diag_error">Ultimo errore: %1$s</string>
     <string name="dv_diag_format">Video: %1$s (livello %2$s), %3$dx%4$d, %5$s fps</string>
-    <string name="dv_diag_decoder">Decoder in uso: %1$s (decoder Dolby Vision: %2$s)</string>
+    <string name="dv_diag_decoder">Decoder in uso: %1$s (modalità: %2$s)</string>
     <string name="dv_diag_display">Lo schermo dichiara il Dolby Vision: %1$s</string>
     <string name="dv_diag_device">Decoder Dolby Vision di questo dispositivo:</string>
     <string name="dv_diag_none">nessuno</string>

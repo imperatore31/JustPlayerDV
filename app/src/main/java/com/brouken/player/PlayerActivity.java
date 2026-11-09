@@ -77,7 +77,6 @@ import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.TrackSelectionParameters;
 import androidx.media3.common.Tracks;
 import androidx.media3.datasource.DefaultHttpDataSource;
-import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlaybackException;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.RenderersFactory;
@@ -102,6 +101,7 @@ import androidx.media3.ui.TimeBar;
 
 import com.brouken.player.dovi.DoviConvertingExtractorsFactory;
 import com.brouken.player.dovi.DoviDeviceSupport;
+import com.brouken.player.dovi.DoviRenderersFactory;
 import com.brouken.player.dovi.DoviSampleConverter;
 import com.brouken.player.dtpv.DoubleTapPlayerView;
 import com.brouken.player.dtpv.youtube.YouTubeOverlay;
@@ -1237,7 +1237,9 @@ public class PlayerActivity extends Activity {
                 ? new DoviConvertingExtractorsFactory(defaultExtractorsFactory)
                 : defaultExtractorsFactory;
         MediaCodecUtil.setMapDV7ToHevc(mPrefs.mapDV7ToHevc);
-        @SuppressLint("WrongConstant") RenderersFactory renderersFactory = new DefaultRenderersFactory(this)
+        // DoviRenderersFactory: use the Dolby Vision decoder for Dolby Vision content even when it
+        // under-reports its capabilities (Media3 1.12 would fall back to plain HEVC)
+        @SuppressLint("WrongConstant") RenderersFactory renderersFactory = new DoviRenderersFactory(this, mPrefs.tunneling)
                 .setExtensionRendererMode(mPrefs.decoderPriority);
 
         ExoPlayer.Builder playerBuilder = new ExoPlayer.Builder(this, renderersFactory)
@@ -1519,8 +1521,16 @@ public class PlayerActivity extends Activity {
         text.append(getString(R.string.dv_diag_format, format.codecs,
                 DoviDeviceSupport.levelName(DoviDeviceSupport.levelFromCodecs(format.codecs)),
                 format.width, format.height, frameRate)).append('\n');
-        text.append(getString(R.string.dv_diag_decoder, decoder,
-                support.isDolbyVisionDecoder(decoder) ? yes : no)).append('\n');
+        final String codecMimeType = DoviRenderersFactory.getLastVideoCodecMimeType();
+        final String mode;
+        if (MimeTypes.VIDEO_DOLBY_VISION.equals(codecMimeType)) {
+            mode = "Dolby Vision";
+        } else if (MimeTypes.VIDEO_H265.equals(codecMimeType)) {
+            mode = "HEVC (HDR10)";
+        } else {
+            mode = codecMimeType != null ? codecMimeType : "?";
+        }
+        text.append(getString(R.string.dv_diag_decoder, decoder, mode)).append('\n');
         text.append(getString(R.string.dv_diag_display,
                 DoviDeviceSupport.isDisplayDolbyVision(this) ? yes : no)).append("\n\n");
         text.append(getString(R.string.dv_diag_device));
