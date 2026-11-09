@@ -24,7 +24,7 @@ DV Player converte il video **mentre lo riproduce**, senza file temporanei e sen
 - riscrive ogni RPU Dolby Vision come RPU profilo 8.1 (come `dovi_tool -m 2 convert --discard`: il MEL viene convertito senza perdite, il FEL perde lo strato di miglioramento),
 - presenta il video al decoder del dispositivo come Dolby Vision 8.1.
 
-Funziona anche con lo streaming: per esempio da **Emby / Jellyfin / Plex** in *Direct Play* (il file MKV originale, senza transcodifica). Il consumo di processore è trascurabile.
+Funziona anche con lo streaming: per esempio da **Emby / Jellyfin / Plex** in *Direct Play* (il file MKV originale, senza transcodifica) oppure da **Stremio**, e in generale da qualsiasi app che permetta di aprire i video con un lettore esterno. Il consumo di processore è trascurabile.
 
 In più DV Player usa sempre il **decoder Dolby Vision** per i video Dolby Vision, anche quando il dispositivo dichiara capacità inferiori a quelle reali (per esempio "P8 FHD 30" su un tablet che riproduce senza problemi il 4K). Just Player 0.219 in questi casi riproduce il 4K Dolby Vision in semplice HDR10.
 
@@ -35,8 +35,8 @@ In più DV Player usa sempre il **decoder Dolby Vision** per i video Dolby Visio
 
 DV Player si installa accanto a Just Player, senza sostituirlo.
 
-### Uso con Emby (o Jellyfin, Plex)
-1. Nell'app Emby scegli di usare un **lettore esterno** e attiva la riproduzione diretta (*Direct Play*).
+### Uso con Emby, Jellyfin, Plex, Stremio e altre app
+1. Nelle impostazioni dell'app (Emby, Jellyfin, Plex, Stremio…) scegli di riprodurre i video con un **lettore esterno**. Con Emby, Jellyfin e Plex attiva anche la riproduzione diretta (*Direct Play*), così arriva il file originale senza transcodifica.
 2. Quando avvii un film, scegli **DV Player**.
 
 ### Impostazioni
@@ -64,7 +64,7 @@ DV Player converts the video **while playing it**, with no temporary files and n
 - every Dolby Vision RPU is rewritten as a profile 8.1 RPU (like `dovi_tool -m 2 convert --discard`: MEL is converted losslessly, FEL loses its enhancement layer),
 - the video is handed to the device decoder as Dolby Vision 8.1.
 
-It also works when streaming, e.g. from **Emby / Jellyfin / Plex** with *Direct Play* (original MKV file, no transcoding). CPU usage is negligible.
+It also works when streaming, e.g. from **Emby / Jellyfin / Plex** with *Direct Play* (original MKV file, no transcoding) or from **Stremio**, and in general from any app that can open videos in an external player. CPU usage is negligible.
 
 DV Player also always uses the **Dolby Vision decoder** for Dolby Vision videos, even when the device declares lower capabilities than it actually has (e.g. "P8 FHD 30" on a tablet that plays 4K just fine). In that case Just Player 0.219 plays 4K Dolby Vision as plain HDR10.
 
@@ -75,8 +75,8 @@ DV Player also always uses the **Dolby Vision decoder** for Dolby Vision videos,
 
 DV Player installs next to Just Player, it does not replace it.
 
-### Usage with Emby (or Jellyfin, Plex)
-1. In the Emby app choose an **external player** and enable *Direct Play*.
+### Usage with Emby, Jellyfin, Plex, Stremio and other apps
+1. In the app settings (Emby, Jellyfin, Plex, Stremio…) choose to play videos with an **external player**. With Emby, Jellyfin and Plex also enable *Direct Play*, so the original file is streamed without transcoding.
 2. When you start a movie, pick **DV Player**.
 
 ### Settings
