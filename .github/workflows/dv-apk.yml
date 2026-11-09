@@ -56,17 +56,6 @@ jobs:
           mkdir -p dist
           cp app/build/outputs/apk/latestUniversal/release/*.apk "dist/JustPlayerDV-build-${{ github.run_number }}.apk"
 
-      # Same app with the original Just Player package name (com.brouken.player), for devices that
-      # enable Dolby Vision features only for known apps. It replaces the original Just Player.
-      - name: Build APK with the original package name
-        run: >
-          ./gradlew --no-daemon :app:assembleLatestUniversalRelease -PoriginalPackage
-          -Pandroid.injected.signing.store.file="$HOME/.dv-signing/test-signing.keystore"
-          -Pandroid.injected.signing.store.password=justplayerdv
-          -Pandroid.injected.signing.key.alias=justplayerdv
-          -Pandroid.injected.signing.key.password=justplayerdv
-          && cp app/build/outputs/apk/latestUniversal/release/*.apk "dist/JustPlayerDV-build-${{ github.run_number }}-pacchetto-originale.apk"
-
       - uses: actions/upload-artifact@v4
         with:
           name: JustPlayerDV-build-${{ github.run_number }}
@@ -86,7 +75,6 @@ jobs:
           body: |
             Build automatica dal ramo `${{ github.ref_name }}` (commit ${{ github.sha }}).
             Per installarla sul tablet: scarica il file `JustPlayerDV-build-${{ github.run_number }}.apk` qui sotto e aprilo.
-            Il file `...-pacchetto-originale.apk` serve solo per i test: sostituisce il Just Player originale (va disinstallato prima).
           files: dist/*.apk
 
       # Keep only the newest build on the Releases page, so the right APK is always the only one.
