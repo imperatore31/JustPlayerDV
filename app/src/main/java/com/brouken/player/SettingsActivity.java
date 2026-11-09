@@ -16,6 +16,8 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.brouken.player.dovi.DoviDeviceSupport;
+
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,7 +83,17 @@ public class SettingsActivity extends AppCompatActivity {
     public static class SettingsFragment extends PreferenceFragmentCompat {
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+            Prefs.initDefaults(getPreferenceManager().getSharedPreferences());
             setPreferencesFromResource(R.xml.root_preferences, rootKey);
+
+            Preference preferenceConvertDV7 = findPreference(Prefs.PREF_KEY_CONVERT_DV7);
+            if (preferenceConvertDV7 != null) {
+                final DoviDeviceSupport doviSupport = DoviDeviceSupport.get();
+                preferenceConvertDV7.setSummary(getString(R.string.pref_convert_dv7_summary) + "\n"
+                        + getString(R.string.pref_convert_dv7_device,
+                        getString(doviSupport.profile8 ? R.string.dv_supported : R.string.dv_not_supported),
+                        getString(doviSupport.profile7 ? R.string.dv_supported : R.string.dv_not_supported)));
+            }
 
             Preference preferenceAutoPiP = findPreference("autoPiP");
             if (preferenceAutoPiP != null) {

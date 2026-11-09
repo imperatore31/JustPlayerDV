@@ -57,4 +57,10 @@
     <string name="pref_map_dv7_off">Riproduci contenuti Blu-ray UHD contenenti Dolby Vision così come sono</string>
     <string name="pref_subtitle_style_bold">Stile grassetto</string>
     <string name="pref_subtitle_style_bold_on">Utilizza il carattere grassetto come regolare</string>
+    <string name="pref_convert_dv7">Converti Dolby Vision profilo 7 in 8.1</string>
+    <string name="pref_convert_dv7_summary">Converte durante la riproduzione il Dolby Vision dei Blu-ray UHD (profilo 7 MEL/FEL) nel profilo 8.1, per i dispositivi che supportano solo il profilo 8.1. Ha la precedenza sulla retrocompatibilità del profilo 7.</string>
+    <string name="pref_convert_dv7_device">Questo dispositivo: Dolby Vision profilo 8 %1$s, profilo 7 %2$s</string>
+    <string name="dv_supported">supportato</string>
+    <string name="dv_not_supported">non supportato</string>
+    <string name="dv_conversion_active">Dolby Vision 7 → 8.1 (decoder: %1$s)</string>
 </resources>

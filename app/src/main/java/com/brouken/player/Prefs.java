@@ -9,6 +9,8 @@ import android.preference.PreferenceManager;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.ui.AspectRatioFrameLayout;
 
+import com.brouken.player.dovi.DoviDeviceSupport;
+
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
@@ -44,6 +46,7 @@ class Prefs {
     private static final String PREF_KEY_FILE_ACCESS = "fileAccess";
     private static final String PREF_KEY_DECODER_PRIORITY = "decoderPriority";
     private static final String PREF_KEY_MAP_DV7 = "mapDV7ToHevc";
+    static final String PREF_KEY_CONVERT_DV7 = "convertDV7ToP81";
     private static final String PREF_KEY_LANGUAGE_AUDIO = "languageAudio";
     private static final String PREF_KEY_SUBTITLE_STYLE_EMBEDDED = "subtitleStyleEmbedded";
     private static final String PREF_KEY_SUBTITLE_STYLE_BOLD = "subtitleStyleBold";
@@ -78,6 +81,7 @@ class Prefs {
     public String fileAccess = "auto";
     public int decoderPriority = DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON;
     public boolean mapDV7ToHevc = false;
+    public boolean convertDV7ToP81 = false;
     public String languageAudio = TRACK_DEVICE;
     public boolean subtitleStyleEmbedded = true;
     public boolean subtitleStyleBold = false;
@@ -90,6 +94,7 @@ class Prefs {
     public Prefs(Context context) {
         mContext = context;
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        initDefaults(mSharedPreferences);
         loadSavedPreferences();
         loadPositions();
     }
@@ -118,6 +123,18 @@ class Prefs {
         loadUserPreferences();
     }
 
+    /**
+     * Enables the Dolby Vision profile 7 to 8.1 conversion by default on devices whose Dolby Vision
+     * decoder supports profile 8 but not profile 7.
+     */
+    static void initDefaults(SharedPreferences sharedPreferences) {
+        if (!sharedPreferences.contains(PREF_KEY_CONVERT_DV7)) {
+            sharedPreferences.edit()
+                    .putBoolean(PREF_KEY_CONVERT_DV7, DoviDeviceSupport.get().isConversionUseful())
+                    .apply();
+        }
+    }
+
     public void loadUserPreferences() {
         autoPiP = mSharedPreferences.getBoolean(PREF_KEY_AUTO_PIP, autoPiP);
         tunneling = mSharedPreferences.getBoolean(PREF_KEY_TUNNELING, tunneling);
@@ -127,6 +144,7 @@ class Prefs {
         fileAccess = mSharedPreferences.getString(PREF_KEY_FILE_ACCESS, fileAccess);
         decoderPriority = Integer.parseInt(mSharedPreferences.getString(PREF_KEY_DECODER_PRIORITY, String.valueOf(decoderPriority)));
         mapDV7ToHevc = mSharedPreferences.getBoolean(PREF_KEY_MAP_DV7, mapDV7ToHevc);
+        convertDV7ToP81 = mSharedPreferences.getBoolean(PREF_KEY_CONVERT_DV7, convertDV7ToP81);
         languageAudio = mSharedPreferences.getString(PREF_KEY_LANGUAGE_AUDIO, languageAudio);
         subtitleStyleEmbedded = mSharedPreferences.getBoolean(PREF_KEY_SUBTITLE_STYLE_EMBEDDED, subtitleStyleEmbedded);
         subtitleStyleBold = mSharedPreferences.getBoolean(PREF_KEY_SUBTITLE_STYLE_BOLD, subtitleStyleBold);

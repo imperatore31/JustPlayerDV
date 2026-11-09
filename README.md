@@ -1,3 +1,23 @@
+# Just Player DV (fork)
+
+This is a fork of [Just (Video) Player](https://github.com/moneytoo/Player) that adds **real-time conversion of Dolby Vision profile 7 to profile 8.1**.
+
+UHD Blu-ray remuxes (e.g. MKV from MakeMKV, played directly or streamed from Emby/Jellyfin/Plex with *Direct Play*) use Dolby Vision profile 7 (MEL or FEL). Most Android phones and tablets have a Dolby Vision decoder that only supports profile 8.1, so they fall back to HDR10. With the conversion enabled, while the file is being read:
+
+ * the enhancement layer NAL units (UNSPEC63) are dropped,
+ * every RPU (UNSPEC62) is rewritten as a profile 8.1 RPU, like `dovi_tool -m 2 convert --discard` (MEL: lossless; FEL: the enhancement layer and its mapping are discarded),
+ * the track is advertised as `dvhe.08.xx`, so the Dolby Vision decoder of the device is used.
+
+Settings (long press the ⚙️ gear icon) → *Convert Dolby Vision profile 7 to 8.1*. It is enabled by default on devices whose Dolby Vision decoder supports profile 8 but not profile 7; the setting also shows what the device supports. When a converted video starts, a toast shows the decoder in use.
+
+Limitations: single-track profile 7 only (BL+EL+RPU in one HEVC track, as in MakeMKV remuxes); progressive streams/files (MKV, MP4, TS), not HLS/DASH; encrypted content is not converted.
+
+The RPU code (`app/src/main/java/com/brouken/player/dovi`) is a Java port of parts of [dovi_tool](https://github.com/quietvoid/dovi_tool) by quietvoid (MIT License), and is tested against dovi_tool's reference files (`app/src/test`).
+
+The application id is `com.brouken.player.dv`, so it can be installed next to the original Just Player.
+
+---
+
 # Just (Video) Player 
 
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/moneytoo/Player.svg?logo=github&label=GitHub&cacheSeconds=3600)](https://github.com/moneytoo/Player/releases/latest)

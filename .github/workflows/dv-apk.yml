@@ -1,0 +1,64 @@
+name: Build Just Player DV APK
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Unit tests (Dolby Vision profile 7 to 8.1 conversion)
+        run: ./gradlew --no-daemon :app:testLatestUniversalDebugUnitTest
+
+      - name: Prepare signing key
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.DV_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Secret DV_KEYSTORE_BASE64 not set: building a debug APK. Every build gets a different signature, so uninstall the previous build before installing a new one."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build signed release APK
+        if: steps.signing.outputs.signed == 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.DV_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.DV_KEY_ALIAS }}
+        run: >
+          ./gradlew --no-daemon :app:assembleLatestUniversalRelease
+          -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.jks"
+          -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD"
+          -Pandroid.injected.signing.key.alias="$KEY_ALIAS"
+          -Pandroid.injected.signing.key.password="$KEYSTORE_PASSWORD"
+
+      - name: Build debug APK
+        if: steps.signing.outputs.signed != 'true'
+        run: ./gradlew --no-daemon :app:assembleLatestUniversalDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JustPlayerDV-build-${{ github.run_number }}
+          path: app/build/outputs/apk/latestUniversal/*/*.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-report-${{ github.run_number }}
+          path: app/build/reports/tests/
+          if-no-files-found: ignore

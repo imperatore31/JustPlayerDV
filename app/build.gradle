@@ -9,11 +9,12 @@ android {
 
     defaultConfig {
         def abiFilter = project.findProperty("abiFilter")
-        applicationId "com.brouken.player"
+        // Fork with Dolby Vision profile 7 -> 8.1 conversion: own id so it installs next to Just Player
+        applicationId "com.brouken.player.dv"
         minSdkVersion 24
         targetSdkVersion 36
         versionCode 219
-        versionName "0.${versionCode}"
+        versionName "0.${versionCode}-dv"
         if (abiFilter) {
             def abiCodeMap = ["x86": 1, "x86_64": 2, "armeabi-v7a": 3, "arm64-v8a": 4]
             versionCode = versionCode * 10 + abiCodeMap[abiFilter]
@@ -119,4 +120,5 @@ dependencies {
     implementation project(path: ':doubletapplayerview')
     implementation project(path: ':android-file-chooser')
     implementation fileTree(dir: "libs", include: ["lib-*.aar"])
+    testImplementation 'junit:junit:4.13.2'
 }

@@ -58,6 +58,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
@@ -81,10 +82,13 @@ import androidx.media3.exoplayer.ExoPlaybackException;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.RenderersFactory;
 import androidx.media3.exoplayer.SeekParameters;
+import androidx.media3.exoplayer.DecoderReuseEvaluation;
+import androidx.media3.exoplayer.analytics.AnalyticsListener;
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import androidx.media3.extractor.DefaultExtractorsFactory;
+import androidx.media3.extractor.ExtractorsFactory;
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory;
 import androidx.media3.extractor.ts.TsExtractor;
 import androidx.media3.session.MediaSession;
@@ -96,6 +100,7 @@ import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.SubtitleView;
 import androidx.media3.ui.TimeBar;
 
+import com.brouken.player.dovi.DoviConvertingExtractorsFactory;
 import com.brouken.player.dtpv.DoubleTapPlayerView;
 import com.brouken.player.dtpv.youtube.YouTubeOverlay;
 import com.getkeepsafe.taptargetview.TapTarget;
@@ -1221,9 +1226,13 @@ public class PlayerActivity extends Activity {
             );
         }
         // https://github.com/google/ExoPlayer/issues/8571
-        DefaultExtractorsFactory extractorsFactory = new DefaultExtractorsFactory()
+        DefaultExtractorsFactory defaultExtractorsFactory = new DefaultExtractorsFactory()
                 .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS)
                 .setTsExtractorTimestampSearchBytes(1500 * TsExtractor.TS_PACKET_SIZE);
+        // Dolby Vision profile 7 -> 8.1 conversion wraps the extractors, see DoviConvertingExtractorsFactory
+        final ExtractorsFactory extractorsFactory = mPrefs.convertDV7ToP81
+                ? new DoviConvertingExtractorsFactory(defaultExtractorsFactory)
+                : defaultExtractorsFactory;
         MediaCodecUtil.setMapDV7ToHevc(mPrefs.mapDV7ToHevc);
         @SuppressLint("WrongConstant") RenderersFactory renderersFactory = new DefaultRenderersFactory(this)
                 .setExtensionRendererMode(mPrefs.decoderPriority);
@@ -1255,6 +1264,10 @@ public class PlayerActivity extends Activity {
 
         if (mPrefs.skipSilence) {
             player.setSkipSilenceEnabled(true);
+        }
+
+        if (mPrefs.convertDV7ToP81) {
+            player.addAnalyticsListener(new DoviConversionNotifier());
         }
 
         youTubeOverlay.player(player);
@@ -1424,6 +1437,38 @@ public class PlayerActivity extends Activity {
         }
         titleView.setVisibility(View.GONE);
         updateButtons(false);
+    }
+
+    /** Shows which decoder plays a Dolby Vision profile 7 track converted to profile 8.1. */
+    private class DoviConversionNotifier implements AnalyticsListener {
+        // The decoder initialization is reported before the input format change, so wait for both.
+        private boolean convertedVideo;
+        @Nullable
+        private String decoderName;
+        private boolean shown;
+
+        @Override
+        public void onVideoInputFormatChanged(@NonNull EventTime eventTime, @NonNull Format format,
+                                              @Nullable DecoderReuseEvaluation decoderReuseEvaluation) {
+            convertedVideo = DoviConvertingExtractorsFactory.isConvertedFormat(format);
+            maybeShow();
+        }
+
+        @Override
+        public void onVideoDecoderInitialized(@NonNull EventTime eventTime, @NonNull String decoderName,
+                                              long initializedTimestampMs, long initializationDurationMs) {
+            this.decoderName = decoderName;
+            shown = false;
+            maybeShow();
+        }
+
+        private void maybeShow() {
+            if (convertedVideo && decoderName != null && !shown) {
+                shown = true;
+                Toast.makeText(PlayerActivity.this, getString(R.string.dv_conversion_active, decoderName),
+                        Toast.LENGTH_LONG).show();
+            }
+        }
     }
 
     private class PlayerListener implements Player.Listener {

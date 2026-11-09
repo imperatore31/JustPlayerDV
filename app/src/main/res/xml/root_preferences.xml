@@ -96,6 +96,12 @@
             app:summaryOff="@string/pref_map_dv7_off"
             app:title="@string/pref_map_dv7" />
 
+        <SwitchPreferenceCompat
+            app:key="convertDV7ToP81"
+            app:defaultValue="false"
+            app:summary="@string/pref_convert_dv7_summary"
+            app:title="@string/pref_convert_dv7" />
+
     </PreferenceCategory>
 
 </PreferenceScreen>
