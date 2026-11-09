@@ -89,6 +89,18 @@ jobs:
             Il file `...-pacchetto-originale.apk` serve solo per i test: sostituisce il Just Player originale (va disinstallato prima).
           files: dist/*.apk
 
+      # Keep only the newest build on the Releases page, so the right APK is always the only one.
+      - name: Remove older releases
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '.[].tagName' |
+            grep -vx "build-${{ github.run_number }}" |
+            while read -r tag; do
+              gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+            done
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
