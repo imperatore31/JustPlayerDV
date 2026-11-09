@@ -5,6 +5,9 @@ on:
     branches: ['**']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,40 +24,55 @@ jobs:
       - name: Unit tests (Dolby Vision profile 7 to 8.1 conversion)
         run: ./gradlew --no-daemon :app:testLatestUniversalDebugUnitTest
 
-      - name: Prepare signing key
-        id: signing
-        env:
-          KEYSTORE_BASE64: ${{ secrets.DV_KEYSTORE_BASE64 }}
+      # The signing key is kept in the Actions cache, so every build has the same signature and
+      # can be installed over the previous one. If the cache expires (7 days without builds) a new
+      # key is created and the app has to be uninstalled once before installing the new build.
+      - name: Restore signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.dv-signing/test-signing.keystore
+          key: dv-test-signing-key-v1
+
+      - name: Create signing key if missing
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
-            echo "signed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::Secret DV_KEYSTORE_BASE64 not set: building a debug APK. Every build gets a different signature, so uninstall the previous build before installing a new one."
-            echo "signed=false" >> "$GITHUB_OUTPUT"
+          mkdir -p ~/.dv-signing
+          if [ ! -f ~/.dv-signing/test-signing.keystore ]; then
+            echo "::warning::New signing key: uninstall the previous build before installing this one."
+            keytool -genkeypair -keystore ~/.dv-signing/test-signing.keystore -storetype PKCS12 \
+              -alias justplayerdv -keyalg RSA -keysize 2048 -validity 36500 \
+              -storepass justplayerdv -keypass justplayerdv -dname "CN=Just Player DV test build"
           fi
 
-      - name: Build signed release APK
-        if: steps.signing.outputs.signed == 'true'
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.DV_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.DV_KEY_ALIAS }}
+      - name: Build release APK
         run: >
           ./gradlew --no-daemon :app:assembleLatestUniversalRelease
-          -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.jks"
-          -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD"
-          -Pandroid.injected.signing.key.alias="$KEY_ALIAS"
-          -Pandroid.injected.signing.key.password="$KEYSTORE_PASSWORD"
+          -Pandroid.injected.signing.store.file="$HOME/.dv-signing/test-signing.keystore"
+          -Pandroid.injected.signing.store.password=justplayerdv
+          -Pandroid.injected.signing.key.alias=justplayerdv
+          -Pandroid.injected.signing.key.password=justplayerdv
 
-      - name: Build debug APK
-        if: steps.signing.outputs.signed != 'true'
-        run: ./gradlew --no-daemon :app:assembleLatestUniversalDebug
+      - name: Collect APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/latestUniversal/release/*.apk "dist/JustPlayerDV-build-${{ github.run_number }}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
           name: JustPlayerDV-build-${{ github.run_number }}
-          path: app/build/outputs/apk/latestUniversal/*/*.apk
+          path: dist/*.apk
           if-no-files-found: error
+
+      - name: Publish the APK on the Releases page
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: Just Player DV - build ${{ github.run_number }}
+          make_latest: true
+          body: |
+            Build automatica dal ramo `${{ github.ref_name }}` (commit ${{ github.sha }}).
+            Per installarla sul tablet: scarica il file `.apk` qui sotto e aprilo.
+          files: dist/*.apk
 
       - uses: actions/upload-artifact@v4
         if: always()

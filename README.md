@@ -16,6 +16,15 @@ The RPU code (`app/src/main/java/com/brouken/player/dovi`) is a Java port of par
 
 The application id is `com.brouken.player.dv`, so it can be installed next to the original Just Player.
 
+### Installazione sul tablet (italiano)
+
+1. Sul tablet apri la pagina **Releases** di questo repository (accedi con il tuo account GitHub) e tocca il file `JustPlayerDV-build-….apk` della build più recente.
+2. Apri il file scaricato. Se Android lo chiede, consenti al browser di "installare app sconosciute".
+3. Avvia **Just Player DV**. In Emby imposta Just Player DV come lettore esterno e usa *Direct Play* (file MKV originale, senza transcodifica).
+4. Quando parte un film in Dolby Vision profilo 7 compare il messaggio "Dolby Vision 7 → 8.1 (decoder: …)". Se il nome del decoder contiene `dolby` o `dv`, il Dolby Vision è attivo.
+
+Le build successive si installano sopra la precedente. Se Android segnala un conflitto di firma, disinstalla Just Player DV e installa di nuovo.
+
 ---
 
 # Just (Video) Player 
