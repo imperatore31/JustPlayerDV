@@ -62,9 +62,8 @@
     <string name="pref_convert_dv7_device">Questo dispositivo: Dolby Vision profilo 8 %1$s, profilo 7 %2$s</string>
     <string name="dv_supported">supportato</string>
     <string name="dv_not_supported">non supportato</string>
-    <string name="dv_conversion_active">Dolby Vision 7 → 8.1 (decoder: %1$s)</string>
     <string name="pref_dv_diagnostics">Diagnostica Dolby Vision</string>
-    <string name="pref_dv_diagnostics_summary">Mostra il decoder e i dettagli della conversione all\'avvio di un video Dolby Vision</string>
+    <string name="pref_dv_diagnostics_summary">Mostra il decoder e i dettagli della conversione la prima volta che metti in pausa un video Dolby Vision</string>
     <string name="dv_diag_title">Diagnostica Dolby Vision</string>
     <string name="dv_diag_converted">Origine: profilo 7 %1$s, convertito in 8.1</string>
     <string name="dv_diag_native">Origine: Dolby Vision (non convertito)</string>

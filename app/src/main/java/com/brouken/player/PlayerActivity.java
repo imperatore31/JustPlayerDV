@@ -1443,16 +1443,17 @@ public class PlayerActivity extends Activity {
     }
 
     /**
-     * Reports how a Dolby Vision video is played: a toast for converted profile 7 tracks or, with
-     * diagnostics enabled, a dialog with the decoder, display support and conversion counters.
+     * Collects how a Dolby Vision video is played and, with diagnostics enabled, shows it in a dialog
+     * the first time playback is paused. Nothing is drawn over the video while it plays, since an
+     * overlay can make the display leave Dolby Vision mode.
      */
     private class DoviDiagnostics implements AnalyticsListener {
         private final boolean showDialog;
-        // The decoder initialization is reported before the input format change, so wait for both.
         @Nullable
         private Format videoFormat;
         @Nullable
         private String decoderName;
+        private boolean played;
         private boolean shown;
 
         DoviDiagnostics(boolean showDialog) {
@@ -1463,32 +1464,31 @@ public class PlayerActivity extends Activity {
         public void onVideoInputFormatChanged(@NonNull EventTime eventTime, @NonNull Format format,
                                               @Nullable DecoderReuseEvaluation decoderReuseEvaluation) {
             videoFormat = format;
-            maybeShow();
         }
 
         @Override
         public void onVideoDecoderInitialized(@NonNull EventTime eventTime, @NonNull String decoderName,
                                               long initializedTimestampMs, long initializationDurationMs) {
             this.decoderName = decoderName;
+            played = false;
             shown = false;
-            maybeShow();
         }
 
-        private void maybeShow() {
+        @Override
+        public void onIsPlayingChanged(@NonNull EventTime eventTime, boolean isPlaying) {
+            if (isPlaying) {
+                played = true;
+                return;
+            }
             final Format format = videoFormat;
             final String decoder = decoderName;
-            if (shown || format == null || decoder == null
-                    || !MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)) {
+            if (!showDialog || shown || !played || format == null || decoder == null
+                    || !MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)
+                    || player == null || player.getPlaybackState() != Player.STATE_READY) {
                 return;
             }
             shown = true;
-            if (showDialog) {
-                // Wait a few seconds so that the conversion counters are meaningful.
-                playerView.postDelayed(() -> showDoviDiagnostics(format, decoder), 4000);
-            } else if (DoviConvertingExtractorsFactory.isConvertedFormat(format)) {
-                Toast.makeText(PlayerActivity.this, getString(R.string.dv_conversion_active, decoder),
-                        Toast.LENGTH_LONG).show();
-            }
+            showDoviDiagnostics(format, decoder);
         }
     }
 

@@ -9,8 +9,10 @@ android {
 
     defaultConfig {
         def abiFilter = project.findProperty("abiFilter")
-        // Fork with Dolby Vision profile 7 -> 8.1 conversion: own id so it installs next to Just Player
-        applicationId "com.brouken.player.dv"
+        // Fork with Dolby Vision profile 7 -> 8.1 conversion: own id so it installs next to Just Player.
+        // -PoriginalPackage builds it with the original id instead (it then replaces Just Player),
+        // to check whether the device enables Dolby Vision features only for known apps.
+        applicationId project.hasProperty("originalPackage") ? "com.brouken.player" : "com.brouken.player.dv"
         minSdkVersion 24
         targetSdkVersion 36
         versionCode 219
