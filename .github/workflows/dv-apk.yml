@@ -62,7 +62,10 @@ jobs:
           path: dist/*.apk
           if-no-files-found: error
 
+      # Only builds of main go to the Releases page: every branch has its own Actions cache, hence
+      # its own signing key, and mixing them would require uninstalling the app.
       - name: Publish the APK on the Releases page
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
