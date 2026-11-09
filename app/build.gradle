@@ -80,6 +80,10 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    testOptions {
+        // android.util.Log & co. return default values in JVM unit tests
+        unitTests.returnDefaultValues = true
+    }
     lint {
         disable 'MissingTranslation'
         disable 'UnsafeOptInUsageError'

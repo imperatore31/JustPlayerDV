@@ -186,10 +186,12 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
      * and forwards it. Other tracks are passed through untouched.
      */
     static final class ConvertingTrackOutput implements TrackOutput {
+        // Package-private so that it can be tested with the real Media3 classes.
 
         private final TrackOutput delegate;
         private final DoviSampleConverter converter = new DoviSampleConverter();
         private final ParsableByteArray scratch = new ParsableByteArray();
+        private final byte[] sizePrefix = new byte[4];
 
         private boolean active;
         private byte[] pending = new byte[512 * 1024];
@@ -286,13 +288,22 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
             }
 
             final int outputSize;
-            if (cryptoData != null || pendingHasOtherParts) {
-                // Encrypted samples or samples with supplemental data are not converted.
+            if (cryptoData != null) {
+                // Encrypted samples are not converted.
                 outputSize = size;
-                forward(pending, sampleStart, size);
+                forward(pending, sampleStart, size, SAMPLE_DATA_PART_MAIN);
+            } else if ((flags & C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA) != 0) {
+                // Matroska tracks with block additions (e.g. any track with a Dolby Vision
+                // BlockAdditionMapping) are written as:
+                // sample size (4 bytes) || sample data || supplemental data
+                outputSize = convertSampleWithSupplementalData(sampleStart, size);
+            } else if (pendingHasOtherParts) {
+                // Unknown layout: leave it untouched.
+                outputSize = size;
+                forward(pending, sampleStart, size, SAMPLE_DATA_PART_MAIN);
             } else {
                 outputSize = converter.convert(pending, sampleStart, size);
-                forward(converter.getOutput(), 0, outputSize);
+                forward(converter.getOutput(), 0, outputSize, SAMPLE_DATA_PART_MAIN);
             }
             delegate.sampleMetadata(timeUs, flags, outputSize, 0, cryptoData);
 
@@ -305,18 +316,43 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
             pendingHasOtherParts = false;
         }
 
-        private void forward(byte[] data, int offset, int length) {
+        private int convertSampleWithSupplementalData(int sampleStart, int size) {
+            final int mainSize = size >= 4 ? readInt(pending, sampleStart) : -1;
+            if (mainSize < 0 || mainSize > size - 4) {
+                Log.w(TAG, "Unexpected supplemental data layout, size=" + size + " mainSize=" + mainSize);
+                forward(pending, sampleStart, size, SAMPLE_DATA_PART_MAIN);
+                return size;
+            }
+            final int supplementalStart = sampleStart + 4 + mainSize;
+            final int supplementalSize = size - 4 - mainSize;
+            final int convertedSize = converter.convert(pending, sampleStart + 4, mainSize);
+            sizePrefix[0] = (byte) (convertedSize >>> 24);
+            sizePrefix[1] = (byte) (convertedSize >>> 16);
+            sizePrefix[2] = (byte) (convertedSize >>> 8);
+            sizePrefix[3] = (byte) convertedSize;
+            forward(sizePrefix, 0, 4, SAMPLE_DATA_PART_SUPPLEMENTAL);
+            forward(converter.getOutput(), 0, convertedSize, SAMPLE_DATA_PART_MAIN);
+            forward(pending, supplementalStart, supplementalSize, SAMPLE_DATA_PART_SUPPLEMENTAL);
+            return 4 + convertedSize + supplementalSize;
+        }
+
+        private static int readInt(byte[] data, int offset) {
+            return ((data[offset] & 0xFF) << 24) | ((data[offset + 1] & 0xFF) << 16)
+                    | ((data[offset + 2] & 0xFF) << 8) | (data[offset + 3] & 0xFF);
+        }
+
+        private void forward(byte[] data, int offset, int length, int sampleDataPart) {
             if (length <= 0) {
                 return;
             }
             // The sample queue copies the bytes right away, so the buffers can be reused afterwards.
             scratch.reset(data, offset + length);
             scratch.setPosition(offset);
-            delegate.sampleData(scratch, length, SAMPLE_DATA_PART_MAIN);
+            delegate.sampleData(scratch, length, sampleDataPart);
         }
 
         private void flushPendingUnchanged() {
-            forward(pending, 0, pendingLength);
+            forward(pending, 0, pendingLength, SAMPLE_DATA_PART_MAIN);
             pendingLength = 0;
             pendingHasOtherParts = false;
         }
