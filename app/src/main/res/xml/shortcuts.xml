@@ -6,7 +6,7 @@
         android:shortcutShortLabel="@string/shortcut_videos">
         <intent
             android:action="com.brouken.player.action.SHORTCUT_VIDEOS"
-            android:targetPackage="io.github.imperatore31.dvbridge"
+            android:targetPackage="io.github.imperatore31.dvplayer"
             android:targetClass="com.brouken.player.PlayerActivity" />
     </shortcut>
 </shortcuts>

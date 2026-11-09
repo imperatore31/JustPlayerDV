@@ -11,8 +11,8 @@ android {
 
     defaultConfig {
         def abiFilter = project.findProperty("abiFilter")
-        // DV Bridge: Just Player 0.219 + real-time Dolby Vision profile 7 -> 8.1 conversion
-        applicationId "io.github.imperatore31.dvbridge"
+        // DV Player for Android: Just Player 0.219 + real-time Dolby Vision profile 7 -> 8.1 conversion
+        applicationId "io.github.imperatore31.dvplayer"
         minSdkVersion 24
         targetSdkVersion 36
         // CI passes -PciBuildNumber (GitHub Actions run number) so every build is an update
@@ -27,7 +27,7 @@ android {
         }
     }
     base {
-        archivesName = "DV.Bridge.v${defaultConfig.versionName}"
+        archivesName = "DV.Player.v${defaultConfig.versionName}"
     }
     buildTypes {
         release {

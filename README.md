@@ -1,13 +1,13 @@
-<p align="center"><img src="web_hi_res_512.png" width="128" alt="DV Bridge"></p>
+<p align="center"><img src="web_hi_res_512.png" width="128" alt="DV Player for Android"></p>
 
-# DV Bridge
+# DV Player for Android
 
 **Dolby Vision profilo 7 → 8.1 in tempo reale per Android** · **Real-time Dolby Vision profile 7 → 8.1 for Android**
 
 [🇮🇹 Italiano](#italiano) · [🇬🇧 English](#english)
 
-DV Bridge è un fork non ufficiale di [Just (Video) Player](https://github.com/moneytoo/Player) di Marcel Dopita.
-DV Bridge is an unofficial fork of [Just (Video) Player](https://github.com/moneytoo/Player) by Marcel Dopita.
+DV Player è un fork non ufficiale di [Just (Video) Player](https://github.com/moneytoo/Player) di Marcel Dopita.
+DV Player is an unofficial fork of [Just (Video) Player](https://github.com/moneytoo/Player) by Marcel Dopita.
 
 **[⬇️ Scarica l'ultima versione / Download the latest version](../../releases/latest)**
 
@@ -19,25 +19,25 @@ DV Bridge is an unofficial fork of [Just (Video) Player](https://github.com/mone
 I remux dei Blu-ray UHD (per esempio i file MKV creati con MakeMKV) usano il **Dolby Vision profilo 7** (MEL o FEL). Quasi tutti i telefoni e i tablet Android con Dolby Vision supportano solo il **profilo 8.1**: con questi file danno errore oppure mostrano solo l'HDR10.
 
 ### La soluzione
-DV Bridge converte il video **mentre lo riproduce**, senza file temporanei e senza ricodificare:
+DV Player converte il video **mentre lo riproduce**, senza file temporanei e senza ricodificare:
 - scarta lo strato di miglioramento (EL),
 - riscrive ogni RPU Dolby Vision come RPU profilo 8.1 (come `dovi_tool -m 2 convert --discard`: il MEL viene convertito senza perdite, il FEL perde lo strato di miglioramento),
 - presenta il video al decoder del dispositivo come Dolby Vision 8.1.
 
 Funziona anche con lo streaming: per esempio da **Emby / Jellyfin / Plex** in *Direct Play* (il file MKV originale, senza transcodifica). Il consumo di processore è trascurabile.
 
-In più DV Bridge usa sempre il **decoder Dolby Vision** per i video Dolby Vision, anche quando il dispositivo dichiara capacità inferiori a quelle reali (per esempio "P8 FHD 30" su un tablet che riproduce senza problemi il 4K). Just Player 0.219 in questi casi riproduce il 4K Dolby Vision in semplice HDR10.
+In più DV Player usa sempre il **decoder Dolby Vision** per i video Dolby Vision, anche quando il dispositivo dichiara capacità inferiori a quelle reali (per esempio "P8 FHD 30" su un tablet che riproduce senza problemi il 4K). Just Player 0.219 in questi casi riproduce il 4K Dolby Vision in semplice HDR10.
 
 ### Installazione
-1. Sul dispositivo Android apri la pagina **[Releases](../../releases/latest)** e scarica il file `DVBridge-….apk`.
+1. Sul dispositivo Android apri la pagina **[Releases](../../releases/latest)** e scarica il file `DVPlayer-….apk`.
 2. Apri il file scaricato. Se Android lo chiede, consenti l'installazione di app sconosciute.
 3. Gli aggiornamenti si installano allo stesso modo, sopra la versione precedente.
 
-DV Bridge si installa accanto a Just Player, senza sostituirlo.
+DV Player si installa accanto a Just Player, senza sostituirlo.
 
 ### Uso con Emby (o Jellyfin, Plex)
 1. Nell'app Emby scegli di usare un **lettore esterno** e attiva la riproduzione diretta (*Direct Play*).
-2. Quando avvii un film, scegli **DV Bridge**.
+2. Quando avvii un film, scegli **DV Player**.
 
 ### Impostazioni
 Avvia un video, tocca lo schermo e **tieni premuta** l'icona dell'ingranaggio ⚙️ in basso a destra. In fondo all'elenco:
@@ -59,25 +59,25 @@ Provato su: Lenovo Tab P12 Pro (Snapdragon 870).
 UHD Blu-ray remuxes (e.g. MKV files made with MakeMKV) use **Dolby Vision profile 7** (MEL or FEL). Almost all Android phones and tablets with Dolby Vision only support **profile 8.1**: they either fail to play these files or show plain HDR10.
 
 ### The solution
-DV Bridge converts the video **while playing it**, with no temporary files and no re-encoding:
+DV Player converts the video **while playing it**, with no temporary files and no re-encoding:
 - the enhancement layer (EL) is dropped,
 - every Dolby Vision RPU is rewritten as a profile 8.1 RPU (like `dovi_tool -m 2 convert --discard`: MEL is converted losslessly, FEL loses its enhancement layer),
 - the video is handed to the device decoder as Dolby Vision 8.1.
 
 It also works when streaming, e.g. from **Emby / Jellyfin / Plex** with *Direct Play* (original MKV file, no transcoding). CPU usage is negligible.
 
-DV Bridge also always uses the **Dolby Vision decoder** for Dolby Vision videos, even when the device declares lower capabilities than it actually has (e.g. "P8 FHD 30" on a tablet that plays 4K just fine). In that case Just Player 0.219 plays 4K Dolby Vision as plain HDR10.
+DV Player also always uses the **Dolby Vision decoder** for Dolby Vision videos, even when the device declares lower capabilities than it actually has (e.g. "P8 FHD 30" on a tablet that plays 4K just fine). In that case Just Player 0.219 plays 4K Dolby Vision as plain HDR10.
 
 ### Installation
-1. On your Android device open the **[Releases](../../releases/latest)** page and download `DVBridge-….apk`.
+1. On your Android device open the **[Releases](../../releases/latest)** page and download `DVPlayer-….apk`.
 2. Open the downloaded file. If Android asks, allow installing unknown apps.
 3. Updates are installed the same way, over the previous version.
 
-DV Bridge installs next to Just Player, it does not replace it.
+DV Player installs next to Just Player, it does not replace it.
 
 ### Usage with Emby (or Jellyfin, Plex)
 1. In the Emby app choose an **external player** and enable *Direct Play*.
-2. When you start a movie, pick **DV Bridge**.
+2. When you start a movie, pick **DV Player**.
 
 ### Settings
 Start a video, tap the screen and **long press** the ⚙️ gear icon at the bottom right. At the end of the list:
@@ -95,9 +95,9 @@ Tested on: Lenovo Tab P12 Pro (Snapdragon 870).
 
 ## Credits & licenses
 
-- **[Just (Video) Player](https://github.com/moneytoo/Player)** by Marcel Dopita – [Unlicense](LICENSE). DV Bridge is based on Just Player 0.219; see its page for the full list of player features.
+- **[Just (Video) Player](https://github.com/moneytoo/Player)** by Marcel Dopita – [Unlicense](LICENSE). DV Player is based on Just Player 0.219; see its page for the full list of player features.
 - **[dovi_tool](https://github.com/quietvoid/dovi_tool)** by quietvoid – MIT License. The RPU code in `app/src/main/java/com/brouken/player/dovi/DoviRpu.java` is a Java port of parts of its `dolby_vision` crate and is tested against its reference files (`app/src/test`).
 - **[AndroidX Media3](https://github.com/androidx/media)** – Apache License 2.0. FFmpeg audio decoders – LGPL.
-- The code added by DV Bridge is released under the Unlicense, like Just Player, except for the parts derived from dovi_tool (MIT).
+- The code added by DV Player is released under the Unlicense, like Just Player, except for the parts derived from dovi_tool (MIT).
 
-Dolby, Dolby Vision and the double-D symbol are trademarks of Dolby Laboratories. DV Bridge is not affiliated with or endorsed by Dolby Laboratories or by the author of Just Player.
+Dolby, Dolby Vision and the double-D symbol are trademarks of Dolby Laboratories. DV Player is not affiliated with or endorsed by Dolby Laboratories or by the author of Just Player.

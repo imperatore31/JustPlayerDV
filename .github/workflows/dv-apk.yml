@@ -1,4 +1,4 @@
-name: Build DV Bridge APK
+name: Build DV Player APK
 
 on:
   push:
@@ -55,7 +55,7 @@ jobs:
           if [ ! -f ~/.dv-signing/test-signing.keystore ]; then
             keytool -genkeypair -keystore ~/.dv-signing/test-signing.keystore -storetype PKCS12 \
               -alias justplayerdv -keyalg RSA -keysize 2048 -validity 36500 \
-              -storepass justplayerdv -keypass justplayerdv -dname "CN=DV Bridge test build"
+              -storepass justplayerdv -keypass justplayerdv -dname "CN=DV Player test build"
           fi
 
       - name: Build release APK
@@ -77,11 +77,11 @@ jobs:
       - name: Collect APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/latestUniversal/release/*.apk "dist/DVBridge-1.0.${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/latestUniversal/release/*.apk "dist/DVPlayer-1.0.${{ github.run_number }}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: DVBridge-1.0.${{ github.run_number }}
+          name: DVPlayer-1.0.${{ github.run_number }}
           path: dist/*.apk
           if-no-files-found: error
 
@@ -92,11 +92,11 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           target_commitish: ${{ github.sha }}
-          name: DV Bridge 1.0.${{ github.run_number }}${{ steps.signing.outputs.official != 'true' && ' (test key)' || '' }}
+          name: DV Player 1.0.${{ github.run_number }}${{ steps.signing.outputs.official != 'true' && ' (test key)' || '' }}
           make_latest: true
           body: |
-            **Italiano** – Scarica `DVBridge-1.0.${{ github.run_number }}.apk` qui sotto e aprilo sul dispositivo Android per installarlo o aggiornarlo.
-            **English** – Download `DVBridge-1.0.${{ github.run_number }}.apk` below and open it on your Android device to install or update.
+            **Italiano** – Scarica `DVPlayer-1.0.${{ github.run_number }}.apk` qui sotto e aprilo sul dispositivo Android per installarlo o aggiornarlo.
+            **English** – Download `DVPlayer-1.0.${{ github.run_number }}.apk` below and open it on your Android device to install or update.
 
             Commit: ${{ github.sha }}
           files: dist/*.apk
