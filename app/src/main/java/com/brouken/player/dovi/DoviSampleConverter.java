@@ -97,7 +97,10 @@ public final class DoviSampleConverter {
             append(START_CODE, 0, 4);
             append(converted, 0, converted.length);
             convertedRpus++;
-            lastElType = elType;
+            if (elType != DoviRpu.ElType.NONE) {
+                // RPUs reusing the previous mapping (use_prev_vdr_rpu_flag) don't carry the EL type.
+                lastElType = elType;
+            }
             return true;
         } catch (DoviException | RuntimeException e) {
             // A profile 7 RPU must not reach a profile 8 decoder: drop it, the decoder keeps going
