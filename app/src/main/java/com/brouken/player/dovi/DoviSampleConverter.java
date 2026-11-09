@@ -7,11 +7,11 @@ import java.util.List;
  * Converts HEVC access units of a single-track Dolby Vision profile 7 stream (Annex B, as produced
  * by the Media3 extractors) into profile 8.1 access units:
  * <ul>
- *   <li>enhancement layer NAL units (UNSPEC63) are dropped,</li>
+ *   <li>enhancement layer NAL units (UNSPEC63, or nuh_layer_id &gt; 0) are dropped,</li>
  *   <li>the RPU NAL unit (UNSPEC62) is converted to profile 8.1,</li>
  *   <li>every other NAL unit (base layer) is copied unchanged.</li>
  * </ul>
- * Not thread safe: use one instance per track.
+ * Not thread safe: use one instance per track (the counters can be read from other threads).
  */
 public final class DoviSampleConverter {
 
@@ -23,12 +23,12 @@ public final class DoviSampleConverter {
     private byte[] output = new byte[256 * 1024];
     private int outputLength;
 
-    private long samples;
-    private long convertedRpus;
-    private long failedRpus;
-    private long droppedElNalUnits;
-    private DoviRpu.ElType lastElType = DoviRpu.ElType.NONE;
-    private String lastError;
+    private volatile long samples;
+    private volatile long convertedRpus;
+    private volatile long failedRpus;
+    private volatile long droppedElNalUnits;
+    private volatile DoviRpu.ElType lastElType = DoviRpu.ElType.NONE;
+    private volatile String lastError;
 
     /**
      * Converts one access unit.
@@ -61,7 +61,8 @@ public final class DoviSampleConverter {
             final int nalLength = nalEnd - nalStart;
             if (nalLength > 0) {
                 final int nalType = nalLength >= 2 ? (data[nalStart] >> 1) & 0x3F : -1;
-                if (nalType == NAL_UNSPEC63) {
+                if (nalType == NAL_UNSPEC63 || (nalLength >= 2 && layerId(data, nalStart) != 0)) {
+                    // Enhancement layer, wrapped (UNSPEC63) or not (nuh_layer_id > 0).
                     droppedElNalUnits++;
                 } else if (nalType == NAL_UNSPEC62) {
                     if (!rpuWritten) {
@@ -76,6 +77,11 @@ public final class DoviSampleConverter {
             prefix = nextPrefix;
         }
         return outputLength;
+    }
+
+    /** HEVC nuh_layer_id of the NAL unit starting at {@code offset}. */
+    static int layerId(byte[] data, int offset) {
+        return ((data[offset] & 0x01) << 5) | ((data[offset + 1] & 0xFF) >> 3);
     }
 
     private boolean writeConvertedRpu(byte[] data, int offset, int length) {
@@ -173,8 +179,8 @@ public final class DoviSampleConverter {
     }
 
     /**
-     * Removes UNSPEC62/UNSPEC63 NAL units (Dolby Vision RPU / enhancement layer) from Annex B codec
-     * initialization data, keeping the base layer VPS/SPS/PPS/SEI.
+     * Removes UNSPEC62/UNSPEC63 NAL units (Dolby Vision RPU / enhancement layer) and NAL units of
+     * other layers from Annex B codec initialization data, keeping the base layer VPS/SPS/PPS/SEI.
      */
     public static List<byte[]> filterInitializationData(List<byte[]> initializationData) {
         final List<byte[]> result = new ArrayList<>(initializationData.size());
@@ -205,7 +211,8 @@ public final class DoviSampleConverter {
             }
             if (nalEnd > nalStart) {
                 final int nalType = (csd[nalStart] >> 1) & 0x3F;
-                if (nalType == NAL_UNSPEC62 || nalType == NAL_UNSPEC63) {
+                final boolean enhancementLayer = nalEnd - nalStart >= 2 && layerId(csd, nalStart) != 0;
+                if (nalType == NAL_UNSPEC62 || nalType == NAL_UNSPEC63 || enhancementLayer) {
                     removed = true;
                 } else {
                     out.write(START_CODE, 0, 4);

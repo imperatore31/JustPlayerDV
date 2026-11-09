@@ -42,7 +42,16 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
     /** Appended to the label of converted video tracks. */
     public static final String LABEL_SUFFIX = "Dolby Vision 7 → 8.1";
 
+    /** Converter of the most recently started profile 7 track, for diagnostics. */
+    @Nullable
+    private static volatile DoviSampleConverter lastActiveConverter;
+
     private final ExtractorsFactory delegate;
+
+    @Nullable
+    public static DoviSampleConverter getLastActiveConverter() {
+        return lastActiveConverter;
+    }
 
     public DoviConvertingExtractorsFactory(ExtractorsFactory delegate) {
         this.delegate = delegate;
@@ -214,6 +223,7 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
                 return;
             }
             active = true;
+            lastActiveConverter = converter;
             final String label = format.label == null ? LABEL_SUFFIX : format.label + " - " + LABEL_SUFFIX;
             final Format converted = format.buildUpon()
                     .setCodecs(DoviSampleConverter.convertCodecsString(format.codecs))

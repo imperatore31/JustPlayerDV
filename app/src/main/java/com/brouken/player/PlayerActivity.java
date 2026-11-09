@@ -101,6 +101,8 @@ import androidx.media3.ui.SubtitleView;
 import androidx.media3.ui.TimeBar;
 
 import com.brouken.player.dovi.DoviConvertingExtractorsFactory;
+import com.brouken.player.dovi.DoviDeviceSupport;
+import com.brouken.player.dovi.DoviSampleConverter;
 import com.brouken.player.dtpv.DoubleTapPlayerView;
 import com.brouken.player.dtpv.youtube.YouTubeOverlay;
 import com.getkeepsafe.taptargetview.TapTarget;
@@ -113,6 +115,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -1266,8 +1269,8 @@ public class PlayerActivity extends Activity {
             player.setSkipSilenceEnabled(true);
         }
 
-        if (mPrefs.convertDV7ToP81) {
-            player.addAnalyticsListener(new DoviConversionNotifier());
+        if (mPrefs.convertDV7ToP81 || mPrefs.dvDiagnostics) {
+            player.addAnalyticsListener(new DoviDiagnostics(mPrefs.dvDiagnostics));
         }
 
         youTubeOverlay.player(player);
@@ -1439,18 +1442,27 @@ public class PlayerActivity extends Activity {
         updateButtons(false);
     }
 
-    /** Shows which decoder plays a Dolby Vision profile 7 track converted to profile 8.1. */
-    private class DoviConversionNotifier implements AnalyticsListener {
+    /**
+     * Reports how a Dolby Vision video is played: a toast for converted profile 7 tracks or, with
+     * diagnostics enabled, a dialog with the decoder, display support and conversion counters.
+     */
+    private class DoviDiagnostics implements AnalyticsListener {
+        private final boolean showDialog;
         // The decoder initialization is reported before the input format change, so wait for both.
-        private boolean convertedVideo;
+        @Nullable
+        private Format videoFormat;
         @Nullable
         private String decoderName;
         private boolean shown;
 
+        DoviDiagnostics(boolean showDialog) {
+            this.showDialog = showDialog;
+        }
+
         @Override
         public void onVideoInputFormatChanged(@NonNull EventTime eventTime, @NonNull Format format,
                                               @Nullable DecoderReuseEvaluation decoderReuseEvaluation) {
-            convertedVideo = DoviConvertingExtractorsFactory.isConvertedFormat(format);
+            videoFormat = format;
             maybeShow();
         }
 
@@ -1463,12 +1475,66 @@ public class PlayerActivity extends Activity {
         }
 
         private void maybeShow() {
-            if (convertedVideo && decoderName != null && !shown) {
-                shown = true;
-                Toast.makeText(PlayerActivity.this, getString(R.string.dv_conversion_active, decoderName),
+            final Format format = videoFormat;
+            final String decoder = decoderName;
+            if (shown || format == null || decoder == null
+                    || !MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)) {
+                return;
+            }
+            shown = true;
+            if (showDialog) {
+                // Wait a few seconds so that the conversion counters are meaningful.
+                playerView.postDelayed(() -> showDoviDiagnostics(format, decoder), 4000);
+            } else if (DoviConvertingExtractorsFactory.isConvertedFormat(format)) {
+                Toast.makeText(PlayerActivity.this, getString(R.string.dv_conversion_active, decoder),
                         Toast.LENGTH_LONG).show();
             }
         }
+    }
+
+    private void showDoviDiagnostics(Format format, String decoder) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        final DoviDeviceSupport support = DoviDeviceSupport.get();
+        final String yes = getString(R.string.dv_yes);
+        final String no = getString(R.string.dv_no);
+        final StringBuilder text = new StringBuilder();
+        if (DoviConvertingExtractorsFactory.isConvertedFormat(format)) {
+            final DoviSampleConverter converter = DoviConvertingExtractorsFactory.getLastActiveConverter();
+            text.append(getString(R.string.dv_diag_converted,
+                    converter != null ? converter.getLastElType().name() : "?")).append('\n');
+            if (converter != null) {
+                text.append(getString(R.string.dv_diag_rpu, converter.getConvertedRpuCount(),
+                        converter.getFailedRpuCount(), converter.getDroppedElNalUnitCount())).append('\n');
+                if (converter.getLastError() != null) {
+                    text.append(getString(R.string.dv_diag_error, converter.getLastError())).append('\n');
+                }
+            }
+        } else {
+            text.append(getString(R.string.dv_diag_native)).append('\n');
+        }
+        final String frameRate = format.frameRate > 0
+                ? String.format(Locale.US, "%.3f", format.frameRate) : "?";
+        text.append(getString(R.string.dv_diag_format, format.codecs,
+                DoviDeviceSupport.levelName(DoviDeviceSupport.levelFromCodecs(format.codecs)),
+                format.width, format.height, frameRate)).append('\n');
+        text.append(getString(R.string.dv_diag_decoder, decoder,
+                support.isDolbyVisionDecoder(decoder) ? yes : no)).append('\n');
+        text.append(getString(R.string.dv_diag_display,
+                DoviDeviceSupport.isDisplayDolbyVision(this) ? yes : no)).append("\n\n");
+        text.append(getString(R.string.dv_diag_device));
+        if (support.decoders.isEmpty()) {
+            text.append("\n\u2022 ").append(getString(R.string.dv_diag_none));
+        }
+        for (Map.Entry<String, String> entry : support.decoders.entrySet()) {
+            text.append("\n\u2022 ").append(entry.getKey()).append(": ").append(entry.getValue());
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dv_diag_title)
+                .setMessage(text)
+                .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> dialogInterface.dismiss())
+                .show();
     }
 
     private class PlayerListener implements Player.Listener {

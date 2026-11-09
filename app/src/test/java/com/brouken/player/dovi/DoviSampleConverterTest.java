@@ -94,6 +94,22 @@ public class DoviSampleConverterTest {
     }
 
     @Test
+    public void dropsNalUnitsOfOtherLayers() throws Exception {
+        // Unwrapped enhancement layer slice: type 1 with nuh_layer_id = 1 (0x02, 0x09).
+        final byte[] layer1Slice = {0x02, 0x09, 0x11, 0x22};
+        final byte[] layer1Sps = {0x42, 0x09, 0x01, 0x02};
+        final byte[] sample = concat(SC4, SLICE, SC4, layer1Slice);
+
+        final DoviSampleConverter converter = new DoviSampleConverter();
+        final int length = converter.convert(sample, 0, sample.length);
+        assertArrayEquals(concat(SC4, SLICE), Arrays.copyOf(converter.getOutput(), length));
+        assertEquals(1, converter.getDroppedElNalUnitCount());
+
+        final byte[] csd = concat(SC4, VPS, SC4, SPS, SC4, layer1Sps);
+        assertArrayEquals(concat(SC4, VPS, SC4, SPS), DoviSampleConverter.filterInitializationData(csd));
+    }
+
+    @Test
     public void largeSampleGrowsOutputBuffer() {
         final byte[] big = new byte[1024 * 1024];
         Arrays.fill(big, (byte) 0x55);

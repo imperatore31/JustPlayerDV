@@ -102,6 +102,12 @@
             app:summary="@string/pref_convert_dv7_summary"
             app:title="@string/pref_convert_dv7" />
 
+        <SwitchPreferenceCompat
+            app:key="dvDiagnostics"
+            app:defaultValue="true"
+            app:summary="@string/pref_dv_diagnostics_summary"
+            app:title="@string/pref_dv_diagnostics" />
+
     </PreferenceCategory>
 
 </PreferenceScreen>
