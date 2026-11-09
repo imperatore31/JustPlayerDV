@@ -83,7 +83,7 @@ class Prefs {
     public int decoderPriority = DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON;
     public boolean mapDV7ToHevc = false;
     public boolean convertDV7ToP81 = false;
-    public boolean dvDiagnostics = true;
+    public boolean dvDiagnostics = false;
     public String languageAudio = TRACK_DEVICE;
     public boolean subtitleStyleEmbedded = true;
     public boolean subtitleStyleBold = false;

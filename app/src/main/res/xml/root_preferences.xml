@@ -104,7 +104,7 @@
 
         <SwitchPreferenceCompat
             app:key="dvDiagnostics"
-            app:defaultValue="true"
+            app:defaultValue="false"
             app:summary="@string/pref_dv_diagnostics_summary"
             app:title="@string/pref_dv_diagnostics" />
 

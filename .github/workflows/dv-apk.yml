@@ -1,4 +1,4 @@
-name: Build Just Player DV APK
+name: Build DV Bridge APK
 
 on:
   push:
@@ -24,57 +24,81 @@ jobs:
       - name: Unit tests (Dolby Vision profile 7 to 8.1 conversion)
         run: ./gradlew --no-daemon :app:testLatestUniversalDebugUnitTest
 
-      # The signing key is kept in the Actions cache, so every build has the same signature and
-      # can be installed over the previous one. If the cache expires (7 days without builds) a new
-      # key is created and the app has to be uninstalled once before installing the new build.
-      - name: Restore signing key
+      # Release signing key: the repository secret DV_KEYSTORE_BASE64 holds the base64 encoded
+      # PKCS12 keystore (alias "dvbridge", password "dvbridge": the secret itself is the protection).
+      # Without the secret (e.g. in forks) a throwaway test key kept in the Actions cache is used and
+      # the release name says "(test key)".
+      - name: Choose signing key
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.DV_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | tr -d ' \r\n' | base64 --decode > "$RUNNER_TEMP/release.p12"
+            echo "official=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Secret DV_KEYSTORE_BASE64 not set: signing with a test key."
+            echo "official=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore test signing key
+        if: steps.signing.outputs.official != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.dv-signing/test-signing.keystore
           key: dv-test-signing-key-v1
 
-      - name: Create signing key if missing
+      - name: Create test signing key if missing
+        if: steps.signing.outputs.official != 'true'
         run: |
           mkdir -p ~/.dv-signing
           if [ ! -f ~/.dv-signing/test-signing.keystore ]; then
-            echo "::warning::New signing key: uninstall the previous build before installing this one."
             keytool -genkeypair -keystore ~/.dv-signing/test-signing.keystore -storetype PKCS12 \
               -alias justplayerdv -keyalg RSA -keysize 2048 -validity 36500 \
-              -storepass justplayerdv -keypass justplayerdv -dname "CN=Just Player DV test build"
+              -storepass justplayerdv -keypass justplayerdv -dname "CN=DV Bridge test build"
           fi
 
       - name: Build release APK
-        run: >
-          ./gradlew --no-daemon :app:assembleLatestUniversalRelease
-          -Pandroid.injected.signing.store.file="$HOME/.dv-signing/test-signing.keystore"
-          -Pandroid.injected.signing.store.password=justplayerdv
-          -Pandroid.injected.signing.key.alias=justplayerdv
-          -Pandroid.injected.signing.key.password=justplayerdv
+        env:
+          OFFICIAL: ${{ steps.signing.outputs.official }}
+        run: |
+          if [ "$OFFICIAL" = "true" ]; then
+            STORE="$RUNNER_TEMP/release.p12"; ALIAS=dvbridge; PASS=dvbridge
+          else
+            STORE="$HOME/.dv-signing/test-signing.keystore"; ALIAS=justplayerdv; PASS=justplayerdv
+          fi
+          ./gradlew --no-daemon :app:assembleLatestUniversalRelease \
+            -PciBuildNumber=${{ github.run_number }} \
+            -Pandroid.injected.signing.store.file="$STORE" \
+            -Pandroid.injected.signing.store.password="$PASS" \
+            -Pandroid.injected.signing.key.alias="$ALIAS" \
+            -Pandroid.injected.signing.key.password="$PASS"
 
       - name: Collect APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/latestUniversal/release/*.apk "dist/JustPlayerDV-build-${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/latestUniversal/release/*.apk "dist/DVBridge-1.0.${{ github.run_number }}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: JustPlayerDV-build-${{ github.run_number }}
+          name: DVBridge-1.0.${{ github.run_number }}
           path: dist/*.apk
           if-no-files-found: error
 
-      # Only builds of main go to the Releases page: every branch has its own Actions cache, hence
-      # its own signing key, and mixing them would require uninstalling the app.
+      # Only builds of main go to the Releases page.
       - name: Publish the APK on the Releases page
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
+          tag_name: v1.0.${{ github.run_number }}
           target_commitish: ${{ github.sha }}
-          name: Just Player DV - build ${{ github.run_number }}
+          name: DV Bridge 1.0.${{ github.run_number }}${{ steps.signing.outputs.official != 'true' && ' (test key)' || '' }}
           make_latest: true
           body: |
-            Build automatica dal ramo `${{ github.ref_name }}` (commit ${{ github.sha }}).
-            Per installarla sul tablet: scarica il file `JustPlayerDV-build-${{ github.run_number }}.apk` qui sotto e aprilo.
+            **Italiano** – Scarica `DVBridge-1.0.${{ github.run_number }}.apk` qui sotto e aprilo sul dispositivo Android per installarlo o aggiornarlo.
+            **English** – Download `DVBridge-1.0.${{ github.run_number }}.apk` below and open it on your Android device to install or update.
+
+            Commit: ${{ github.sha }}
           files: dist/*.apk
 
       # Keep only the newest build on the Releases page, so the right APK is always the only one.
@@ -84,7 +108,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '.[].tagName' |
-            grep -vx "build-${{ github.run_number }}" |
+            grep -vx "v1.0.${{ github.run_number }}" |
             while read -r tag; do
               gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
             done
