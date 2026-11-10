@@ -3,6 +3,8 @@ name: Build DV Player APK
 on:
   push:
     branches: ['**']
+    # Documentation-only changes don't produce a new app version
+    paths-ignore: ['**.md']
   workflow_dispatch:
 
 permissions:

@@ -9,7 +9,7 @@
 DV Player è un fork non ufficiale di [Just (Video) Player](https://github.com/moneytoo/Player) di Marcel Dopita.
 DV Player is an unofficial fork of [Just (Video) Player](https://github.com/moneytoo/Player) by Marcel Dopita.
 
-**[⬇️ Scarica l'ultima versione / Download the latest version](../../releases/latest)**
+**[⬇️ Scarica l'ultima versione / Download the latest version](../../releases/latest)** · **[❤️ Sostieni il progetto / Support the project](https://paypal.me/imperatore31)**
 
 ---
 
@@ -51,6 +51,9 @@ Avvia un video, tocca lo schermo e **tieni premuta** l'icona dell'ingranaggio �
 
 Provato su: Lenovo Tab P12 Pro (Snapdragon 870).
 
+### Sostieni il progetto
+DV Player è gratuito e senza pubblicità. Se ti è utile, puoi sostenerne lo sviluppo con una donazione libera su PayPal: **[paypal.me/imperatore31](https://paypal.me/imperatore31)**. Grazie!
+
 ---
 
 ## English
@@ -90,6 +93,9 @@ Start a video, tap the screen and **long press** the ⚙️ gear icon at the bot
 - A device with a Dolby Vision profile 8 decoder is required; otherwise the video plays as HDR10.
 
 Tested on: Lenovo Tab P12 Pro (Snapdragon 870).
+
+### Support the project
+DV Player is free and ad-free. If you find it useful, you can support its development with a donation of any amount on PayPal: **[paypal.me/imperatore31](https://paypal.me/imperatore31)**. Thank you!
 
 ---
 
