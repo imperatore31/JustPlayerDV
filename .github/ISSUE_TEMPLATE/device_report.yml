@@ -1,0 +1,67 @@
+name: "Device report / Segnala il tuo dispositivo"
+description: "Tell us if Dolby Vision works on your device / Dicci se il Dolby Vision funziona sul tuo dispositivo"
+title: "[Device] "
+labels: ["device report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing DV Player! / Grazie per aver provato DV Player!
+        Tip: enable **Dolby Vision diagnostics** in the settings (long press the ⚙️ gear icon), pause a Dolby Vision video and attach a screenshot of the dialog.
+        Suggerimento: attiva **Diagnostica Dolby Vision** nelle impostazioni (pressione lunga sull'ingranaggio ⚙️), metti in pausa un video Dolby Vision e allega uno screenshot della finestra.
+  - type: input
+    id: device
+    attributes:
+      label: "Device model / Modello del dispositivo"
+      placeholder: "e.g. Lenovo Tab P12 Pro, Fire TV Stick 4K Max, Samsung Galaxy S24..."
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: "Android version / Versione di Android"
+      placeholder: "e.g. 13"
+  - type: input
+    id: version
+    attributes:
+      label: "DV Player version / Versione di DV Player"
+      placeholder: "e.g. 1.0.28"
+  - type: dropdown
+    id: content
+    attributes:
+      label: "Video / Video"
+      options:
+        - "Dolby Vision profile 7 FEL"
+        - "Dolby Vision profile 7 MEL"
+        - "Dolby Vision profile 7 (FEL/MEL unknown / non so)"
+        - "Dolby Vision profile 8.1"
+        - "Other / Altro"
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: "Played from / Riprodotto da"
+      options:
+        - "Local file / File locale"
+        - "Emby"
+        - "Jellyfin"
+        - "Plex"
+        - "Stremio"
+        - "Other / Altro"
+  - type: dropdown
+    id: result
+    attributes:
+      label: "Result / Risultato"
+      options:
+        - "Dolby Vision works (diagnostics mode: Dolby Vision) / Il Dolby Vision funziona"
+        - "Plays, but only HDR10 / Si vede, ma solo in HDR10"
+        - "Error or does not play / Errore o non parte"
+        - "Plays with stutters or glitches / Si vede a scatti o con difetti"
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: "Diagnostics screenshot and notes / Screenshot della diagnostica e note"
+      description: "Drag the screenshot here / Trascina qui lo screenshot"

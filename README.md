@@ -49,7 +49,7 @@ Avvia un video, tocca lo schermo e **tieni premuta** l'icona dell'ingranaggio �
 - File e flussi progressivi (MKV, MP4, TS); non HLS/DASH. I contenuti cifrati non vengono convertiti.
 - Serve un dispositivo con decoder Dolby Vision profilo 8; altrimenti il video viene riprodotto in HDR10.
 
-Provato su: Lenovo Tab P12 Pro (Snapdragon 870).
+Provato su: Lenovo Tab P12 Pro (Snapdragon 870). **Hai provato DV Player sul tuo dispositivo? [Facci sapere com'è andata](../../issues/new?template=device_report.yml)**, anche se funziona: ci aiuta a capire su quali telefoni e TV box il Dolby Vision si attiva.
 
 ### Sostieni il progetto
 DV Player è gratuito e senza pubblicità. Se ti è utile, puoi sostenerne lo sviluppo con una donazione libera su PayPal: **[paypal.me/imperatore31](https://paypal.me/imperatore31)**. Grazie!
@@ -92,7 +92,7 @@ Start a video, tap the screen and **long press** the ⚙️ gear icon at the bot
 - Progressive files/streams (MKV, MP4, TS); not HLS/DASH. Encrypted content is not converted.
 - A device with a Dolby Vision profile 8 decoder is required; otherwise the video plays as HDR10.
 
-Tested on: Lenovo Tab P12 Pro (Snapdragon 870).
+Tested on: Lenovo Tab P12 Pro (Snapdragon 870). **Tried DV Player on your device? [Let us know how it went](../../issues/new?template=device_report.yml)**, even if it works: it helps us learn on which phones and TV boxes Dolby Vision kicks in.
 
 ### Support the project
 DV Player is free and ad-free. If you find it useful, you can support its development with a donation of any amount on PayPal: **[paypal.me/imperatore31](https://paypal.me/imperatore31)**. Thank you!

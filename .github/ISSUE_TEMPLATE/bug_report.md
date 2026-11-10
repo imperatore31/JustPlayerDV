@@ -22,7 +22,7 @@ A clear and concise description of what you expected to happen.
 **Device (please complete the following information):**
  - Model: [e.g. Samsung Galaxy S22]
  - OS: [e.g. Android 13]
- - Version [e.g. 0.134]
+ - DV Player version [e.g. 1.0.28]
 
 **Media**
 If applicable, add a short media sample which triggers the problem.

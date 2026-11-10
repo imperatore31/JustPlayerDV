@@ -4,7 +4,7 @@ on:
   push:
     branches: ['**']
     # Documentation-only changes don't produce a new app version
-    paths-ignore: ['**.md']
+    paths-ignore: ['**.md', '.github/ISSUE_TEMPLATE/**']
   workflow_dispatch:
 
 permissions:
