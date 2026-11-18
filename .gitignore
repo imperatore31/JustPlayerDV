@@ -14,3 +14,4 @@ local.properties
 *.p12
 *.keystore
 signing/
+__pycache__/
