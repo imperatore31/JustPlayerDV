@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://imperatore31.github.io/JustPlayerDV/sitemap.xml

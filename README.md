@@ -9,7 +9,7 @@
 DV Player è un fork non ufficiale di [Just (Video) Player](https://github.com/moneytoo/Player) di Marcel Dopita.
 DV Player is an unofficial fork of [Just (Video) Player](https://github.com/moneytoo/Player) by Marcel Dopita.
 
-**[⬇️ Scarica l'ultima versione / Download the latest version](../../releases/latest)** · **[❤️ Sostieni il progetto / Support the project](https://paypal.me/imperatore31)**
+**[🌐 Sito / Website](https://imperatore31.github.io/JustPlayerDV/)** · **[⬇️ Scarica l'ultima versione / Download the latest version](../../releases/latest)** · **[❤️ Sostieni il progetto / Support the project](https://paypal.me/imperatore31)**
 
 ---
 

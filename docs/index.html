@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DV Player for Android – Dolby Vision profile 7 to 8.1 and HDR10+ video player</title>
+<meta name="description" content="Free, open source Android video player that plays Dolby Vision profile 7 (UHD Blu-ray remux, MEL/FEL) in real Dolby Vision on phones and tablets by converting it to profile 8.1 in real time, and converts Dolby Vision to HDR10+ on Samsung and Pixel devices. External player for Emby, Jellyfin, Plex and Stremio.">
+<meta name="keywords" content="Dolby Vision profile 7, Dolby Vision profile 8.1, FEL, MEL, HDR10+, Android video player, Emby external player, Jellyfin, Plex, Stremio, MKV, UHD Blu-ray remux, dovi_tool, Just Player">
+<link rel="canonical" href="https://imperatore31.github.io/JustPlayerDV/">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DV Player for Android">
+<meta property="og:description" content="Dolby Vision profile 7 to 8.1 in real time, Dolby Vision to HDR10+ for Samsung and Pixel. Free and open source.">
+<meta property="og:url" content="https://imperatore31.github.io/JustPlayerDV/">
+<meta property="og:image" content="https://imperatore31.github.io/JustPlayerDV/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "DV Player for Android",
+  "operatingSystem": "Android 7.0 or later",
+  "applicationCategory": "MultimediaApplication",
+  "description": "Android video player that converts Dolby Vision profile 7 (MEL/FEL) to profile 8.1 in real time and Dolby Vision to HDR10+ for devices without Dolby Vision.",
+  "url": "https://imperatore31.github.io/JustPlayerDV/",
+  "downloadUrl": "https://github.com/imperatore31/JustPlayerDV/releases/latest",
+  "image": "https://imperatore31.github.io/JustPlayerDV/assets/og.png",
+  "license": "https://unlicense.org/",
+  "isAccessibleForFree": true,
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}
+}
+</script>
+<style>
+  :root { --bg:#0d0a1c; --card:#1a1433; --text:#ece9f6; --muted:#b9b2d6; --accent:#8b6cff; --accent2:#5b3fd1; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+  a { color:#c4b5ff; }
+  header { background:linear-gradient(160deg,#2a1a5e 0%,#0d0a1c 70%); padding:56px 20px 40px; text-align:center; }
+  header img.icon { width:120px; height:120px; border-radius:28px; box-shadow:0 10px 40px rgba(110,70,255,.45); }
+  h1 { font-size:2.6rem; margin:18px 0 6px; letter-spacing:-.5px; }
+  .tagline { font-size:1.2rem; color:var(--muted); max-width:760px; margin:0 auto 28px; }
+  .buttons { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .btn { display:inline-block; padding:14px 26px; border-radius:12px; font-weight:700; text-decoration:none; }
+  .btn.primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; box-shadow:0 6px 24px rgba(110,70,255,.4); }
+  .btn.secondary { background:rgba(255,255,255,.08); color:var(--text); border:1px solid rgba(255,255,255,.15); }
+  .lang { margin-top:18px; font-size:.95rem; }
+  main { max-width:980px; margin:0 auto; padding:10px 20px 60px; }
+  section { margin-top:46px; }
+  h2 { font-size:1.7rem; margin-bottom:10px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+  .card { background:var(--card); border:1px solid rgba(255,255,255,.07); border-radius:16px; padding:20px; }
+  .card h3 { margin:0 0 8px; font-size:1.1rem; }
+  .card p { margin:0; color:var(--muted); }
+  img.wide { width:100%; border-radius:16px; border:1px solid rgba(255,255,255,.08); }
+  ol, ul { padding-left:22px; }
+  li { margin:6px 0; }
+  .note { color:var(--muted); font-size:.95rem; }
+  .donate { text-align:center; background:var(--card); border-radius:16px; padding:26px; }
+  footer { text-align:center; color:var(--muted); font-size:.85rem; padding:30px 20px 40px; border-top:1px solid rgba(255,255,255,.07); }
+  code { background:rgba(255,255,255,.08); padding:1px 6px; border-radius:6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <img class="icon" src="assets/icon.png" alt="DV Player icon" width="120" height="120">
+  <h1>DV Player for Android</h1>
+  <p class="tagline">Watch UHD Blu-ray remuxes in <strong>real Dolby Vision</strong> on Android phones and tablets: Dolby Vision profile 7 (MEL/FEL) is converted to profile 8.1 while it plays. No Dolby Vision? Get <strong>HDR10+</strong> instead.</p>
+  <div class="buttons">
+    <a class="btn primary" href="https://github.com/imperatore31/JustPlayerDV/releases/latest">⬇️ Download the APK</a>
+    <a class="btn secondary" href="https://github.com/imperatore31/JustPlayerDV">Source code on GitHub</a>
+  </div>
+  <p class="lang"><a href="#italiano">🇮🇹 Leggi in italiano</a> · Free · Open source · No ads · No tracking</p>
+</header>
+
+<main>
+
+<section>
+  <h2>Why DV Player</h2>
+  <p>UHD Blu-ray remuxes use Dolby Vision <strong>profile 7</strong>. Almost every Android phone and tablet with Dolby Vision only supports <strong>profile 8.1</strong>, so these files fail with a codec error or play as plain HDR10. DV Player fixes this on the device, in real time, also when streaming.</p>
+  <div class="grid">
+    <div class="card"><h3>Profile 7 → 8.1 on the fly</h3><p>The enhancement layer is dropped and every Dolby Vision RPU is rewritten as profile 8.1, like dovi_tool does – during playback, with negligible CPU usage. MEL is lossless.</p></div>
+    <div class="card"><h3>4K Dolby Vision that actually engages</h3><p>Many devices under-report their Dolby Vision decoder (e.g. “FHD 30”) and recent players fall back to HDR10 for 4K. DV Player keeps the Dolby Vision decoder.</p></div>
+    <div class="card"><h3>Dolby Vision → HDR10+ (experimental)</h3><p>On devices without Dolby Vision but with HDR10+ (Samsung, Google Pixel), Dolby Vision metadata becomes HDR10+ dynamic metadata, scene by scene. Hybrid files keep their original HDR10+.</p></div>
+    <div class="card"><h3>TV style HDR label</h3><p>When a video starts, a translucent label shows what is really playing: Dolby Vision, HDR10+ original, HDR10+ converted, HDR10 or HLG.</p></div>
+    <div class="card"><h3>Works with your media server</h3><p>Use it as the external player of Emby, Jellyfin, Plex or Stremio (Direct Play), or open local MKV/MP4 files.</p></div>
+    <div class="card"><h3>Built-in diagnostics</h3><p>Pause a Dolby Vision video to see the decoder in use, the real playback mode and the conversion counters.</p></div>
+  </div>
+</section>
+
+<section>
+  <img class="wide" src="assets/labels.png" alt="TV style HDR format labels: Dolby Vision, HDR10+ original, HDR10+ converted, HDR10" width="1200" height="500" loading="lazy">
+</section>
+
+<section>
+  <h2>Install</h2>
+  <ol>
+    <li>On your Android device open the <a href="https://github.com/imperatore31/JustPlayerDV/releases/latest">latest release</a> and download <code>DVPlayer-….apk</code>.</li>
+    <li>Open the file and allow installing apps from your browser if Android asks.</li>
+    <li>In Emby, Jellyfin, Plex or Stremio choose an external player, enable Direct Play, and pick <strong>DV Player</strong> when a movie starts.</li>
+  </ol>
+  <p class="note">Settings: start a video, tap the screen and long press the ⚙️ gear icon. DV Player installs next to Just Player and updates install over the previous version.</p>
+</section>
+
+<section>
+  <h2>FAQ</h2>
+  <p><strong>Is FEL supported?</strong> FEL is converted to profile 8.1 too: the picture is the Dolby Vision base layer with its dynamic metadata, without the enhancement layer (as with dovi_tool mode 2). True dual layer FEL needs dedicated hardware that phones and tablets don't have.</p>
+  <p><strong>Which files?</strong> Single-track Dolby Vision profile 7 (as in MakeMKV remuxes) and profile 8.1 in MKV, MP4 or TS files and progressive streams. HLS/DASH and encrypted content are not converted.</p>
+  <p><strong>Tested on:</strong> Lenovo Tab P12 Pro (Dolby Vision) and Google Pixel 8 Pro (HDR10+). Tried it on another device? <a href="https://github.com/imperatore31/JustPlayerDV/issues/new?template=device_report.yml">Tell us how it went</a>.</p>
+</section>
+
+<section class="donate">
+  <h2>Support the project</h2>
+  <p>DV Player is free and ad-free. If it is useful to you, a donation of any amount helps.</p>
+  <a class="btn primary" href="https://paypal.me/imperatore31">❤️ Donate with PayPal</a>
+</section>
+
+<section id="italiano" lang="it">
+  <h2>🇮🇹 In italiano</h2>
+  <p><strong>DV Player</strong> è un lettore video gratuito e open source per Android che riproduce i remux dei Blu-ray UHD in <strong>vero Dolby Vision</strong> su telefoni e tablet: il Dolby Vision profilo 7 (MEL/FEL), che quasi nessun dispositivo Android supporta, viene convertito nel profilo 8.1 durante la riproduzione, anche in streaming.</p>
+  <ul>
+    <li><strong>Profilo 7 → 8.1 in tempo reale</strong>: scarta lo strato di miglioramento e riscrive i metadati Dolby Vision, come dovi_tool. Il MEL è senza perdite.</li>
+    <li><strong>Dolby Vision 4K sbloccato</strong> sui dispositivi che dichiarano capacità inferiori a quelle reali.</li>
+    <li><strong>Dolby Vision → HDR10+ (sperimentale)</strong> per i dispositivi senza Dolby Vision, come Samsung e Google Pixel. I file ibridi mantengono il loro HDR10+ originale.</li>
+    <li><strong>Etichetta in stile TV</strong> all'avvio del video: Dolby Vision, HDR10+ original, HDR10+ converted, HDR10 o HLG.</li>
+    <li><strong>Lettore esterno</strong> per Emby, Jellyfin, Plex e Stremio (Direct Play).</li>
+  </ul>
+  <p><strong>Installazione:</strong> dal dispositivo Android apri l'<a href="https://github.com/imperatore31/JustPlayerDV/releases/latest">ultima versione</a>, scarica il file <code>DVPlayer-….apk</code> e aprilo. Le impostazioni si aprono tenendo premuta l'icona dell'ingranaggio ⚙️ durante un video.</p>
+  <p>Se DV Player ti è utile puoi sostenerlo con una <a href="https://paypal.me/imperatore31">donazione su PayPal</a>. Hai provato DV Player sul tuo dispositivo? <a href="https://github.com/imperatore31/JustPlayerDV/issues/new?template=device_report.yml">Facci sapere com'è andata</a>.</p>
+</section>
+
+</main>
+
+<footer>
+  DV Player is an unofficial fork of <a href="https://github.com/moneytoo/Player">Just (Video) Player</a> by Marcel Dopita (Unlicense). Dolby Vision and HDR10+ code ported from <a href="https://github.com/quietvoid/dovi_tool">dovi_tool</a> and <a href="https://github.com/quietvoid/hdr10plus_tool">hdr10plus_tool</a> by quietvoid (MIT).<br>
+  Dolby, Dolby Vision and the double-D symbol are trademarks of Dolby Laboratories. HDR10+ is a trademark of HDR10+ Technologies, LLC. DV Player is not affiliated with or endorsed by them.
+</footer>
+
+</body>
+</html>
