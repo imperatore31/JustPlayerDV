@@ -48,7 +48,22 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
     @Nullable
     private static volatile DoviSampleConverter lastActiveConverter;
 
+    /** HDR10+ found in the first samples of the last unconverted HEVC track: -1 unknown, 0 no, 1 yes. */
+    private static volatile int lastObservedHdr10Plus = -1;
+
+    /** Number of samples of unconverted HEVC tracks scanned for HDR10+ metadata. */
+    private static final int OBSERVED_SAMPLES = 48;
+
+    /**
+     * Whether the last unconverted HEVC/Dolby Vision track carries HDR10+ metadata: -1 unknown,
+     * 0 no, 1 yes.
+     */
+    public static int getLastObservedHdr10Plus() {
+        return lastObservedHdr10Plus;
+    }
+
     private final ExtractorsFactory delegate;
+    @Nullable
     private final DoviSampleConverter.Mode mode;
 
     @Nullable
@@ -64,9 +79,10 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
     /**
      * @param mode {@link DoviSampleConverter.Mode#PROFILE_8_1} converts profile 7 to 8.1;
      *     {@link DoviSampleConverter.Mode#HDR10_PLUS} turns profile 7 and 8 into HEVC with HDR10+
-     *     metadata, for devices without Dolby Vision.
+     *     metadata, for devices without Dolby Vision; null converts nothing and only looks for
+     *     HDR10+ metadata in HEVC tracks (for the HDR format badge).
      */
-    public DoviConvertingExtractorsFactory(ExtractorsFactory delegate, DoviSampleConverter.Mode mode) {
+    public DoviConvertingExtractorsFactory(ExtractorsFactory delegate, @Nullable DoviSampleConverter.Mode mode) {
         this.delegate = delegate;
         this.mode = mode;
     }
@@ -81,9 +97,9 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
         return format != null && format.label != null && format.label.endsWith(LABEL_SUFFIX_HDR10_PLUS);
     }
 
-    /** Whether a track with this format is converted in the given mode. */
-    static boolean shouldConvert(Format format, DoviSampleConverter.Mode mode) {
-        if (!MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)) {
+    /** Whether a track with this format is converted in the given mode (null: no conversion). */
+    static boolean shouldConvert(Format format, @Nullable DoviSampleConverter.Mode mode) {
+        if (mode == null || !MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)) {
             return false;
         }
         if (mode == DoviSampleConverter.Mode.PROFILE_8_1) {
@@ -233,6 +249,9 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
         private final byte[] sizePrefix = new byte[4];
 
         private boolean active;
+        /** Not converted, but the first samples are scanned for HDR10+ metadata. */
+        private boolean observing;
+        private int observedSamples;
         private byte[] pending = new byte[512 * 1024];
         private int pendingLength;
         private boolean pendingHasOtherParts;
@@ -260,13 +279,21 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
         @Override
         public void format(Format format) {
             if (!shouldConvert(format, mode)) {
-                if (active) {
+                if (active || observing) {
                     flushPendingUnchanged();
                     active = false;
+                    observing = false;
+                }
+                if (MimeTypes.VIDEO_H265.equals(format.sampleMimeType)
+                        || MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)) {
+                    observing = true;
+                    observedSamples = 0;
+                    lastObservedHdr10Plus = -1;
                 }
                 delegate.format(format);
                 return;
             }
+            observing = false;
             active = true;
             lastActiveConverter = converter;
             final Format converted;
@@ -293,7 +320,7 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
         @Override
         public int sampleData(DataReader input, int length, boolean allowEndOfInput, int sampleDataPart)
                 throws IOException {
-            if (!active) {
+            if (!active && !observing) {
                 return delegate.sampleData(input, length, allowEndOfInput, sampleDataPart);
             }
             ensureCapacity(pendingLength + length);
@@ -313,7 +340,7 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
 
         @Override
         public void sampleData(ParsableByteArray data, int length, int sampleDataPart) {
-            if (!active) {
+            if (!active && !observing) {
                 delegate.sampleData(data, length, sampleDataPart);
                 return;
             }
@@ -327,7 +354,7 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
 
         @Override
         public void sampleMetadata(long timeUs, int flags, int size, int offset, @Nullable CryptoData cryptoData) {
-            if (!active) {
+            if (!active && !observing) {
                 delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData);
                 return;
             }
@@ -337,7 +364,12 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
                 // Inconsistent with what was written: should never happen, keep the data flowing.
                 Log.w(TAG, "Unexpected sample layout, size=" + size + " offset=" + offset + " pending=" + pendingLength);
                 flushPendingUnchanged();
+                observing = false;
                 delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData);
+                return;
+            }
+            if (!active) {
+                observeSample(timeUs, flags, sampleStart, sampleEnd, size, cryptoData);
                 return;
             }
 
@@ -368,6 +400,29 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
             }
             pendingLength = remaining;
             pendingHasOtherParts = false;
+        }
+
+        /** Forwards an unconverted sample unchanged, looking for HDR10+ metadata in it. */
+        private void observeSample(long timeUs, int flags, int sampleStart, int sampleEnd, int size,
+                                   @Nullable CryptoData cryptoData) {
+            final boolean hdr10Plus = cryptoData == null
+                    && DoviSampleConverter.containsHdr10PlusSei(pending, sampleStart, size);
+            forward(pending, sampleStart, size, SAMPLE_DATA_PART_MAIN);
+            delegate.sampleMetadata(timeUs, flags, size, 0, cryptoData);
+            final int remaining = pendingLength - sampleEnd;
+            if (remaining > 0) {
+                System.arraycopy(pending, sampleEnd, pending, 0, remaining);
+            }
+            pendingLength = remaining;
+            pendingHasOtherParts = false;
+
+            observedSamples++;
+            if (hdr10Plus || observedSamples >= OBSERVED_SAMPLES) {
+                lastObservedHdr10Plus = hdr10Plus ? 1 : 0;
+                // Done: pass everything through from now on.
+                observing = false;
+                flushPendingUnchanged();
+            }
         }
 
         private int convertSampleWithSupplementalData(int sampleStart, int size) {

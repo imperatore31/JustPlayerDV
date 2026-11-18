@@ -64,6 +64,9 @@ public class DoviRenderersFactory extends DefaultRenderersFactory {
                                        MediaCodecSelector mediaCodecSelector, boolean enableDecoderFallback,
                                        Handler eventHandler, VideoRendererEventListener eventListener,
                                        long allowedVideoJoiningTimeMs, ArrayList<Renderer> out) {
+        // New player: forget the decoder of the previous one (diagnostics, HDR badge)
+        lastVideoCodecMimeType = null;
+        lastHdr10PlusProfileSet = false;
         final int start = out.size();
         super.buildVideoRenderers(context, extensionRendererMode, mediaCodecSelector, enableDecoderFallback,
                 eventHandler, eventListener, allowedVideoJoiningTimeMs, out);

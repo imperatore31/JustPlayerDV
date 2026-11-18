@@ -1239,7 +1239,8 @@ public class PlayerActivity extends Activity {
         final DoviSampleConverter.Mode doviMode = mPrefs.convertDVToHdr10Plus
                 ? DoviSampleConverter.Mode.HDR10_PLUS
                 : mPrefs.convertDV7ToP81 ? DoviSampleConverter.Mode.PROFILE_8_1 : null;
-        final ExtractorsFactory extractorsFactory = doviMode != null
+        // (with no conversion the wrapper only looks for HDR10+ metadata, for the HDR format badge)
+        final ExtractorsFactory extractorsFactory = doviMode != null || mPrefs.hdrBadge || mPrefs.dvDiagnostics
                 ? new DoviConvertingExtractorsFactory(defaultExtractorsFactory, doviMode)
                 : defaultExtractorsFactory;
         MediaCodecUtil.setMapDV7ToHevc(mPrefs.mapDV7ToHevc);
@@ -1277,8 +1278,8 @@ public class PlayerActivity extends Activity {
             player.setSkipSilenceEnabled(true);
         }
 
-        if (doviMode != null || mPrefs.dvDiagnostics) {
-            player.addAnalyticsListener(new DoviDiagnostics(mPrefs.dvDiagnostics));
+        if (doviMode != null || mPrefs.dvDiagnostics || mPrefs.hdrBadge) {
+            player.addAnalyticsListener(new DoviDiagnostics(mPrefs.dvDiagnostics, mPrefs.hdrBadge));
         }
 
         youTubeOverlay.player(player);
@@ -1457,14 +1458,28 @@ public class PlayerActivity extends Activity {
      */
     private class DoviDiagnostics implements AnalyticsListener {
         private final boolean showDialog;
+        private final boolean showBadge;
+        private boolean badgeShown;
         @Nullable
         private Format videoFormat;
         @Nullable
         private String decoderName;
         private boolean played;
 
-        DoviDiagnostics(boolean showDialog) {
+        DoviDiagnostics(boolean showDialog, boolean showBadge) {
             this.showDialog = showDialog;
+            this.showBadge = showBadge;
+        }
+
+        @Override
+        public void onRenderedFirstFrame(@NonNull EventTime eventTime, @NonNull Object output, long renderTimeMs) {
+            final Format format = videoFormat;
+            if (!showBadge || badgeShown || format == null) {
+                return;
+            }
+            badgeShown = true;
+            // Give the extractor a moment to see the first RPUs/HDR10+ metadata
+            playerView.postDelayed(() -> showHdrBadge(hdrFormatLabel(format)), 800);
         }
 
         @Override
@@ -1478,6 +1493,7 @@ public class PlayerActivity extends Activity {
                                               long initializedTimestampMs, long initializationDurationMs) {
             this.decoderName = decoderName;
             played = false;
+            badgeShown = false;
         }
 
         @Override
@@ -1503,6 +1519,95 @@ public class PlayerActivity extends Activity {
 
     @Nullable
     private AlertDialog doviDiagnosticsDialog;
+
+    @Nullable
+    private TextView hdrBadge;
+
+    /** HDR format shown in the TV style badge, or null for SDR video. */
+    @Nullable
+    private String hdrFormatLabel(Format format) {
+        if (MimeTypes.VIDEO_DOLBY_VISION.equals(DoviRenderersFactory.getLastVideoCodecMimeType())) {
+            return "Dolby Vision";
+        }
+        final boolean hevc = MimeTypes.VIDEO_H265.equals(format.sampleMimeType)
+                || MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType);
+        if (DoviConvertingExtractorsFactory.isHdr10PlusFormat(format)) {
+            final DoviSampleConverter converter = DoviConvertingExtractorsFactory.getLastActiveConverter();
+            if (converter != null && converter.getExistingHdr10PlusSeiCount() > 0) {
+                return "HDR10+ original";
+            }
+            if (converter != null && converter.getInsertedHdr10PlusSeiCount() > 0) {
+                return "HDR10+ converted";
+            }
+        } else if (hevc && DoviConvertingExtractorsFactory.getLastObservedHdr10Plus() == 1) {
+            return "HDR10+ original";
+        }
+        if (format.colorInfo != null) {
+            if (format.colorInfo.colorTransfer == C.COLOR_TRANSFER_ST2084) {
+                return "HDR10";
+            }
+            if (format.colorInfo.colorTransfer == C.COLOR_TRANSFER_HLG) {
+                return "HLG";
+            }
+        }
+        // Dolby Vision played through the HEVC decoder: its base layer is HDR10
+        if (MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)
+                || DoviConvertingExtractorsFactory.isHdr10PlusFormat(format)) {
+            return "HDR10";
+        }
+        return null;
+    }
+
+    /** Shows the HDR format in the top left corner for a few seconds, like a TV does. */
+    private void showHdrBadge(@Nullable String label) {
+        if (label == null || isFinishing() || isDestroyed()
+                || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPip())) {
+            return;
+        }
+        final FrameLayout overlay = playerView.getOverlayFrameLayout();
+        if (overlay == null) {
+            return;
+        }
+        final float density = getResources().getDisplayMetrics().density;
+        if (hdrBadge == null) {
+            hdrBadge = new TextView(this);
+            final android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
+            background.setColor(0x99000000);
+            background.setCornerRadius(8 * density);
+            hdrBadge.setBackground(background);
+            hdrBadge.setTextColor(Color.WHITE);
+            hdrBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            hdrBadge.setTypeface(Typeface.DEFAULT_BOLD);
+            hdrBadge.setLetterSpacing(0.04f);
+            final int paddingH = Math.round(14 * density);
+            final int paddingV = Math.round(7 * density);
+            hdrBadge.setPadding(paddingH, paddingV, paddingH, paddingV);
+            hdrBadge.setAlpha(0f);
+            overlay.addView(hdrBadge, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT, android.view.Gravity.TOP | android.view.Gravity.START));
+        }
+        // Keep clear of display cutouts (camera holes)
+        int left = Math.round(28 * density);
+        int top = Math.round(28 * density);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && getWindow().getDecorView().getRootWindowInsets() != null
+                && getWindow().getDecorView().getRootWindowInsets().getDisplayCutout() != null) {
+            final android.view.DisplayCutout cutout = getWindow().getDecorView().getRootWindowInsets().getDisplayCutout();
+            left += cutout.getSafeInsetLeft();
+            top += cutout.getSafeInsetTop();
+        }
+        final FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) hdrBadge.getLayoutParams();
+        params.setMargins(left, top, 0, 0);
+        hdrBadge.setLayoutParams(params);
+
+        final TextView badge = hdrBadge;
+        badge.animate().cancel();
+        badge.setText(label);
+        badge.setAlpha(0f);
+        badge.setVisibility(View.VISIBLE);
+        badge.animate().setStartDelay(0).alpha(1f).setDuration(300).withEndAction(() ->
+                badge.animate().setStartDelay(2500).alpha(0f).setDuration(900)
+                        .withEndAction(() -> badge.setVisibility(View.GONE)).start()).start();
+    }
 
     private void showDoviDiagnostics(Format format, String decoder) {
         if (isFinishing() || isDestroyed()) {

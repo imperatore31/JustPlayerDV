@@ -290,6 +290,44 @@ public class DoviConvertingTrackOutputTest {
     }
 
     @Test
+    public void unconvertedHevcTracksAreScannedForHdr10Plus() throws Exception {
+        createAccessUnit();
+        final byte[] hdr10PlusSei = Hdr10PlusGenerator.fromLevel1(0, 3000, 1500).toSeiNalUnit();
+        final byte[] hdr10PlusSample = concat(SC, hdr10PlusSei, SC, slice);
+        final byte[] plainSample = concat(SC, slice);
+
+        // HDR10+ file: found in the first samples, everything passes through unchanged
+        final CapturingTrackOutput capture = new CapturingTrackOutput();
+        final TrackOutput output = new DoviConvertingExtractorsFactory.ConvertingTrackOutput(capture, null);
+        output.format(new Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H265).build());
+        assertEquals(-1, DoviConvertingExtractorsFactory.getLastObservedHdr10Plus());
+        for (int i = 0; i < 3; i++) {
+            final byte[] sample = i == 1 ? hdr10PlusSample : plainSample;
+            output.sampleData(new ParsableByteArray(sample), sample.length);
+            output.sampleMetadata(i, 0, sample.length, 0, null);
+        }
+        assertEquals(1, DoviConvertingExtractorsFactory.getLastObservedHdr10Plus());
+        assertArrayEquals(plainSample, capture.samples.get(0));
+        assertArrayEquals(hdr10PlusSample, capture.samples.get(1));
+        assertArrayEquals(plainSample, capture.samples.get(2));
+        assertEquals(MimeTypes.VIDEO_H265, capture.format.sampleMimeType);
+
+        // HDR10 file: no HDR10+ after the scanned samples
+        final CapturingTrackOutput capture2 = new CapturingTrackOutput();
+        final TrackOutput output2 = new DoviConvertingExtractorsFactory.ConvertingTrackOutput(capture2, null);
+        output2.format(new Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H265).build());
+        for (int i = 0; i < 60; i++) {
+            output2.sampleData(new ParsableByteArray(plainSample), plainSample.length);
+            output2.sampleMetadata(i, 0, plainSample.length, 0, null);
+        }
+        assertEquals(0, DoviConvertingExtractorsFactory.getLastObservedHdr10Plus());
+        assertEquals(60, capture2.samples.size());
+        for (byte[] sample : capture2.samples) {
+            assertArrayEquals(plainSample, sample);
+        }
+    }
+
+    @Test
     public void encryptedSamplesArePassedThrough() throws Exception {
         createAccessUnit();
         final CapturingTrackOutput capture = new CapturingTrackOutput();

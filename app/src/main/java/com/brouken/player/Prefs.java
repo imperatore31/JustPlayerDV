@@ -49,6 +49,7 @@ class Prefs {
     static final String PREF_KEY_CONVERT_DV7 = "convertDV7ToP81";
     static final String PREF_KEY_CONVERT_DV_HDR10PLUS = "convertDVToHdr10Plus";
     private static final String PREF_KEY_DV_DIAGNOSTICS = "dvDiagnostics";
+    private static final String PREF_KEY_HDR_BADGE = "hdrBadge";
     private static final String PREF_KEY_LANGUAGE_AUDIO = "languageAudio";
     private static final String PREF_KEY_SUBTITLE_STYLE_EMBEDDED = "subtitleStyleEmbedded";
     private static final String PREF_KEY_SUBTITLE_STYLE_BOLD = "subtitleStyleBold";
@@ -86,6 +87,7 @@ class Prefs {
     public boolean convertDV7ToP81 = false;
     public boolean convertDVToHdr10Plus = false;
     public boolean dvDiagnostics = false;
+    public boolean hdrBadge = true;
     public String languageAudio = TRACK_DEVICE;
     public boolean subtitleStyleEmbedded = true;
     public boolean subtitleStyleBold = false;
@@ -159,6 +161,7 @@ class Prefs {
         convertDV7ToP81 = mSharedPreferences.getBoolean(PREF_KEY_CONVERT_DV7, convertDV7ToP81);
         convertDVToHdr10Plus = mSharedPreferences.getBoolean(PREF_KEY_CONVERT_DV_HDR10PLUS, convertDVToHdr10Plus);
         dvDiagnostics = mSharedPreferences.getBoolean(PREF_KEY_DV_DIAGNOSTICS, dvDiagnostics);
+        hdrBadge = mSharedPreferences.getBoolean(PREF_KEY_HDR_BADGE, hdrBadge);
         languageAudio = mSharedPreferences.getString(PREF_KEY_LANGUAGE_AUDIO, languageAudio);
         subtitleStyleEmbedded = mSharedPreferences.getBoolean(PREF_KEY_SUBTITLE_STYLE_EMBEDDED, subtitleStyleEmbedded);
         subtitleStyleBold = mSharedPreferences.getBoolean(PREF_KEY_SUBTITLE_STYLE_BOLD, subtitleStyleBold);

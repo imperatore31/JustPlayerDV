@@ -88,4 +88,6 @@
     <string name="dv_diag_hdr10plus_scene">Current scene (generated HDR10+): peak %1$d nits, average %2$d nits</string>
     <string name="dv_diag_hdr10plus_scene_file">Current scene (original HDR10+): peak %1$d nits, average %2$d nits</string>
     <string name="dv_diag_format_plain">Video: %1$s, %2$dx%3$d, %4$s fps</string>
+    <string name="pref_hdr_badge">Show the HDR format (TV style)</string>
+    <string name="pref_hdr_badge_summary">When a video starts, show its format for a few seconds in the top left corner: Dolby Vision, HDR10+ original or converted, HDR10, HLG</string>
 </resources>

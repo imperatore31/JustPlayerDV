@@ -373,6 +373,28 @@ public final class DoviSampleConverter {
         return codecs != null && codecs.startsWith("dvhe.07");
     }
 
+    /** Whether an Annex B access unit contains a prefix SEI with HDR10+ metadata. */
+    public static boolean containsHdr10PlusSei(byte[] data, int offset, int length) {
+        final int end = offset + length;
+        int prefix = findStartCodePrefix(data, offset, end);
+        while (prefix < end) {
+            final int nalStart = prefix + 3;
+            final int nextPrefix = findStartCodePrefix(data, nalStart, end);
+            int nalEnd = nextPrefix;
+            if (nextPrefix < end) {
+                while (nalEnd > nalStart && data[nalEnd - 1] == 0) {
+                    nalEnd--;
+                }
+            }
+            if (nalEnd - nalStart >= 3 && ((data[nalStart] >> 1) & 0x3F) == Hdr10PlusMetadata.NAL_SEI_PREFIX
+                    && Hdr10PlusMetadata.isHdr10PlusSei(data, nalStart, nalEnd - nalStart)) {
+                return true;
+            }
+            prefix = nextPrefix;
+        }
+        return false;
+    }
+
     /** Profile 7 or 8 (HEVC, HDR10 compatible base layer unless HLG): convertible to HDR10+. */
     public static boolean isProfile7Or8Codecs(String codecs) {
         return codecs != null && (codecs.startsWith("dvhe.07") || codecs.startsWith("dvhe.08"));

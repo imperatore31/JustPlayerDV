@@ -109,6 +109,12 @@
             app:title="@string/pref_convert_dv_hdr10plus" />
 
         <SwitchPreferenceCompat
+            app:key="hdrBadge"
+            app:defaultValue="true"
+            app:summary="@string/pref_hdr_badge_summary"
+            app:title="@string/pref_hdr_badge" />
+
+        <SwitchPreferenceCompat
             app:key="dvDiagnostics"
             app:defaultValue="false"
             app:summary="@string/pref_dv_diagnostics_summary"
