@@ -25,6 +25,8 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Icon;
 import android.hardware.display.DisplayManager;
+import android.media.AudioDeviceCallback;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.media.audiofx.AudioEffect;
 import android.media.audiofx.LoudnessEnhancer;
@@ -99,6 +101,9 @@ import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.SubtitleView;
 import androidx.media3.ui.TimeBar;
 
+import com.brouken.player.audio.AudioRoutes;
+import com.brouken.player.audio.RoomPreset;
+import com.brouken.player.audio.VirtualSurroundAudioProcessor;
 import com.brouken.player.dovi.DoviConvertingExtractorsFactory;
 import com.brouken.player.dovi.DoviDeviceSupport;
 import com.brouken.player.dovi.DoviRenderersFactory;
@@ -173,6 +178,14 @@ public class PlayerActivity extends Activity {
     private ImageButton buttonRotation;
     private ImageButton exoSettings;
     private ImageButton exoPlayPause;
+    private ImageButton buttonVirtualSurround;
+    /** Headphone virtual surround of the current player, null when switched off in the settings. */
+    @Nullable
+    private VirtualSurroundAudioProcessor virtualSurround;
+    /** Virtual surround switched off from the player (kept while the app runs). */
+    private boolean virtualSurroundBypassed;
+    @Nullable
+    private AudioDeviceCallback audioDeviceCallback;
     private ProgressBar loadingProgressBar;
     private PlayerControlView controlView;
     private CustomDefaultTimeBar timeBar;
@@ -452,6 +465,37 @@ public class PlayerActivity extends Activity {
             resetHideCallbacks();
         });
 
+        buttonVirtualSurround = new ImageButton(this, null, 0, R.style.ExoStyledControls_Button_Bottom);
+        buttonVirtualSurround.setImageResource(R.drawable.ic_surround_sound_24dp);
+        buttonVirtualSurround.setContentDescription(getString(R.string.button_virtual_surround));
+        buttonVirtualSurround.setVisibility(View.GONE);
+        buttonVirtualSurround.setOnClickListener(view -> {
+            if (virtualSurround == null) {
+                return;
+            }
+            virtualSurroundBypassed = !virtualSurroundBypassed;
+            virtualSurround.setUserBypassed(virtualSurroundBypassed);
+            showVirtualSurroundState();
+            updateButtonVirtualSurround();
+            resetHideCallbacks();
+        });
+        buttonVirtualSurround.setOnLongClickListener(view -> {
+            if (virtualSurround == null) {
+                return true;
+            }
+            final RoomPreset room = virtualSurround.getPreset().next();
+            virtualSurround.setPreset(room);
+            mPrefs.updateVirtualSurroundRoom(room.key);
+            if (virtualSurroundBypassed) {
+                virtualSurroundBypassed = false;
+                virtualSurround.setUserBypassed(false);
+                updateButtonVirtualSurround();
+            }
+            Utils.showText(playerView, getString(R.string.virtual_surround_room_changed, getRoomName(room)));
+            resetHideCallbacks();
+            return true;
+        });
+
         final int titleViewPaddingHorizontal = Utils.dpToPx(14);
         final int titleViewPaddingVertical = getResources().getDimensionPixelOffset(R.dimen.exo_styled_bottom_bar_time_padding);
         FrameLayout centerView = playerView.findViewById(R.id.exo_controls_background);
@@ -629,6 +673,7 @@ public class PlayerActivity extends Activity {
 
         controls.addView(buttonOpen);
         controls.addView(exoSubtitle);
+        controls.addView(buttonVirtualSurround);
         controls.addView(buttonAspectRatio);
         if (Utils.isPiPSupported(this) && buttonPiP != null) {
             controls.addView(buttonPiP);
@@ -1244,9 +1289,23 @@ public class PlayerActivity extends Activity {
                 ? new DoviConvertingExtractorsFactory(defaultExtractorsFactory, doviMode)
                 : defaultExtractorsFactory;
         MediaCodecUtil.setMapDV7ToHevc(mPrefs.mapDV7ToHevc);
+        // Headphone virtual surround: an audio processor in the audio sink
+        unregisterAudioDeviceCallback();
+        virtualSurround = mPrefs.virtualSurround
+                ? new VirtualSurroundAudioProcessor(this, RoomPreset.fromKey(mPrefs.virtualSurroundRoom))
+                : null;
+        if (virtualSurround != null) {
+            virtualSurround.setUserBypassed(virtualSurroundBypassed);
+            // Prefer the multichannel tracks even without a spatializer: they are rendered here
+            trackSelector.setParameters(trackSelector.buildUponParameters()
+                    .setConstrainAudioChannelCountToDeviceCapabilities(false));
+            registerAudioDeviceCallback();
+        }
+        buttonVirtualSurround.setVisibility(virtualSurround != null ? View.VISIBLE : View.GONE);
+        updateButtonVirtualSurround();
         // DoviRenderersFactory: use the Dolby Vision decoder for Dolby Vision content even when it
         // under-reports its capabilities (Media3 1.12 would fall back to plain HEVC)
-        @SuppressLint("WrongConstant") RenderersFactory renderersFactory = new DoviRenderersFactory(this, mPrefs.tunneling)
+        @SuppressLint("WrongConstant") RenderersFactory renderersFactory = new DoviRenderersFactory(this, mPrefs.tunneling, virtualSurround)
                 .setExtensionRendererMode(mPrefs.decoderPriority);
 
         ExoPlayer.Builder playerBuilder = new ExoPlayer.Builder(this, renderersFactory)
@@ -1447,8 +1506,80 @@ public class PlayerActivity extends Activity {
             player.release();
             player = null;
         }
+        unregisterAudioDeviceCallback();
         titleView.setVisibility(View.GONE);
         updateButtons(false);
+    }
+
+    // ---- Headphone virtual surround
+
+    private void registerAudioDeviceCallback() {
+        audioDeviceCallback = new AudioDeviceCallback() {
+            @Override
+            public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
+                onAudioDevicesChanged();
+            }
+
+            @Override
+            public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
+                onAudioDevicesChanged();
+            }
+        };
+        // The callback is also called right away with the devices already connected
+        mAudioManager.registerAudioDeviceCallback(audioDeviceCallback, null);
+    }
+
+    private void unregisterAudioDeviceCallback() {
+        if (audioDeviceCallback != null) {
+            mAudioManager.unregisterAudioDeviceCallback(audioDeviceCallback);
+            audioDeviceCallback = null;
+        }
+    }
+
+    private void onAudioDevicesChanged() {
+        if (virtualSurround == null) {
+            return;
+        }
+        final boolean headphones = AudioRoutes.hasHeadphones(this);
+        if (headphones != virtualSurround.isHeadphonesConnected()) {
+            virtualSurround.setHeadphonesConnected(headphones);
+            updateButtonVirtualSurround();
+        }
+    }
+
+    private void updateButtonVirtualSurround() {
+        if (buttonVirtualSurround == null) {
+            return;
+        }
+        final boolean on = virtualSurround != null && !virtualSurroundBypassed && virtualSurround.isHeadphonesConnected();
+        buttonVirtualSurround.setImageAlpha(on ? 255 : 100);
+    }
+
+    private void showVirtualSurroundState() {
+        if (virtualSurround == null) {
+            return;
+        }
+        final String text;
+        if (virtualSurroundBypassed) {
+            text = getString(R.string.virtual_surround_off);
+        } else if (!virtualSurround.isHeadphonesConnected()) {
+            text = getString(R.string.virtual_surround_no_headphones);
+        } else {
+            text = getString(R.string.virtual_surround_on, getRoomName(virtualSurround.getPreset()));
+        }
+        Utils.showText(playerView, text);
+    }
+
+    private String getRoomName(RoomPreset room) {
+        switch (room) {
+            case STUDIO:
+                return getString(R.string.virtual_surround_room_studio);
+            case HALL:
+                return getString(R.string.virtual_surround_room_hall);
+            case LISTENING_ROOM:
+            default:
+                return getString(R.string.virtual_surround_room_room);
+        }
     }
 
     /**

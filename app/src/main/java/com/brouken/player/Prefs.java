@@ -9,6 +9,7 @@ import android.preference.PreferenceManager;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.ui.AspectRatioFrameLayout;
 
+import com.brouken.player.audio.RoomPreset;
 import com.brouken.player.dovi.DoviDeviceSupport;
 
 import java.io.FileInputStream;
@@ -53,6 +54,8 @@ class Prefs {
     private static final String PREF_KEY_LANGUAGE_AUDIO = "languageAudio";
     private static final String PREF_KEY_SUBTITLE_STYLE_EMBEDDED = "subtitleStyleEmbedded";
     private static final String PREF_KEY_SUBTITLE_STYLE_BOLD = "subtitleStyleBold";
+    private static final String PREF_KEY_VIRTUAL_SURROUND = "virtualSurround";
+    private static final String PREF_KEY_VIRTUAL_SURROUND_ROOM = "virtualSurroundRoom";
 
     public static final String TRACK_DEFAULT = "default";
     public static final String TRACK_DEVICE = "device";
@@ -91,6 +94,8 @@ class Prefs {
     public String languageAudio = TRACK_DEVICE;
     public boolean subtitleStyleEmbedded = true;
     public boolean subtitleStyleBold = false;
+    public boolean virtualSurround = false;
+    public String virtualSurroundRoom = RoomPreset.LISTENING_ROOM.key;
 
     private LinkedHashMap positions;
 
@@ -165,6 +170,14 @@ class Prefs {
         languageAudio = mSharedPreferences.getString(PREF_KEY_LANGUAGE_AUDIO, languageAudio);
         subtitleStyleEmbedded = mSharedPreferences.getBoolean(PREF_KEY_SUBTITLE_STYLE_EMBEDDED, subtitleStyleEmbedded);
         subtitleStyleBold = mSharedPreferences.getBoolean(PREF_KEY_SUBTITLE_STYLE_BOLD, subtitleStyleBold);
+        virtualSurround = mSharedPreferences.getBoolean(PREF_KEY_VIRTUAL_SURROUND, virtualSurround);
+        virtualSurroundRoom = mSharedPreferences.getString(PREF_KEY_VIRTUAL_SURROUND_ROOM, virtualSurroundRoom);
+    }
+
+    /** Room chosen from the player (long press on the virtual surround button). */
+    public void updateVirtualSurroundRoom(String room) {
+        virtualSurroundRoom = room;
+        mSharedPreferences.edit().putString(PREF_KEY_VIRTUAL_SURROUND_ROOM, room).apply();
     }
 
     public void updateMedia(final Context context, final Uri uri, final String type) {

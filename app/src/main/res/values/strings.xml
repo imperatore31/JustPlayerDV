@@ -90,4 +90,16 @@
     <string name="dv_diag_format_plain">Video: %1$s, %2$dx%3$d, %4$s fps</string>
     <string name="pref_hdr_badge">Show the HDR format (TV style)</string>
     <string name="pref_hdr_badge_summary">When a video starts, show its format for a few seconds in the top left corner: Dolby Vision, HDR10+ original or converted, HDR10, HLG</string>
+    <string name="pref_audio_header">Headphone virtual surround</string>
+    <string name="pref_virtual_surround">Virtual surround for headphones</string>
+    <string name="pref_virtual_surround_summary">Plays the audio through virtual speakers in a virtual room, in front of and around you, with the dialogue coming from the screen: stereo, 5.1 and 7.1. Works with any wired, USB or Bluetooth headphones; turn off the spatial audio of the phone and of the headphones. In the player, tap the button to compare with the original sound, long-press it to change the room.</string>
+    <string name="pref_virtual_surround_room">Room</string>
+    <string name="virtual_surround_room_studio">Studio (small, dry)</string>
+    <string name="virtual_surround_room_room">Listening room</string>
+    <string name="virtual_surround_room_hall">Large hall</string>
+    <string name="button_virtual_surround">Virtual surround</string>
+    <string name="virtual_surround_on">Virtual surround: %1$s</string>
+    <string name="virtual_surround_off">Virtual surround off (original sound)</string>
+    <string name="virtual_surround_no_headphones">Virtual surround: connect headphones</string>
+    <string name="virtual_surround_room_changed">Room: %1$s</string>
 </resources>

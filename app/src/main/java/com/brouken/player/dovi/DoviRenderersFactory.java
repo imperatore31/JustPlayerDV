@@ -8,8 +8,11 @@ import android.os.Handler;
 import androidx.annotation.Nullable;
 import androidx.media3.common.Format;
 import androidx.media3.common.MimeTypes;
+import androidx.media3.common.audio.AudioProcessor;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.Renderer;
+import androidx.media3.exoplayer.audio.AudioSink;
+import androidx.media3.exoplayer.audio.DefaultAudioSink;
 import androidx.media3.exoplayer.mediacodec.MediaCodecAdapter;
 import androidx.media3.exoplayer.mediacodec.MediaCodecInfo;
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
@@ -40,6 +43,9 @@ public class DoviRenderersFactory extends DefaultRenderersFactory {
     private static volatile boolean lastHdr10PlusProfileSet;
 
     private final boolean tunnelingEnabled;
+    /** Extra audio processor (headphone virtual surround), first in the audio processing chain. */
+    @Nullable
+    private final AudioProcessor audioProcessor;
 
     /**
      * Returns the MIME type the last video decoder was configured with, e.g. video/dolby-vision or
@@ -55,8 +61,27 @@ public class DoviRenderersFactory extends DefaultRenderersFactory {
     }
 
     public DoviRenderersFactory(Context context, boolean tunnelingEnabled) {
+        this(context, tunnelingEnabled, null);
+    }
+
+    public DoviRenderersFactory(Context context, boolean tunnelingEnabled, @Nullable AudioProcessor audioProcessor) {
         super(context);
         this.tunnelingEnabled = tunnelingEnabled;
+        this.audioProcessor = audioProcessor;
+    }
+
+    @Override
+    protected AudioSink buildAudioSink(Context context, boolean enableFloatOutput,
+                                       boolean enableAudioOutputPlaybackParameters) {
+        if (audioProcessor == null) {
+            return super.buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParameters);
+        }
+        // Same as DefaultRenderersFactory, plus the audio processor
+        return new DefaultAudioSink.Builder(context)
+                .setEnableFloatOutput(enableFloatOutput)
+                .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParameters)
+                .setAudioProcessors(new AudioProcessor[]{audioProcessor})
+                .build();
     }
 
     @Override

@@ -31,6 +31,13 @@ In più DV Player usa sempre il **decoder Dolby Vision** per i video Dolby Visio
 ### Novità sperimentale: Dolby Vision → HDR10+
 Sui dispositivi **senza Dolby Vision ma con HDR10+** (per esempio Samsung e Google Pixel), DV Player può riprodurre i video Dolby Vision (profilo 7 MEL/FEL e profilo 8.1) come HDR10 con **metadati dinamici HDR10+** ricavati scena per scena da quelli Dolby Vision. Il risultato è un'approssimazione: migliore dell'HDR10 statico, ma non identico al Dolby Vision. Se il file contiene già metadati HDR10+, vengono usati quelli originali.
 
+### Novità: audio olografico per cuffie
+Con qualsiasi cuffia o auricolare (a filo, USB-C o Bluetooth) DV Player può far sentire l'audio come se arrivasse da **casse vere in una stanza**: i dialoghi dallo schermo davanti a te, i surround ai lati e dietro. Funziona con lo stereo e con il 5.1/7.1 decodificato dal player (AC3, E-AC3, DTS, TrueHD…). Ogni canale suona da una cassa virtuale in una stanza simulata: riflessioni e riverbero sono calcolati e filtrati con le risposte della testa artificiale MIT KEMAR; i bassi restano asciutti. Ci sono tre ambienti: *Studio*, *Sala d'ascolto* e *Sala grande*.
+- Si attiva in **Audio olografico per cuffie**, nella sezione *Audio olografico (cuffie)* delle impostazioni.
+- Nel player compare l'icona del surround: **toccala** per confrontare con l'audio originale, **tienila premuta** per cambiare ambiente.
+- Disattiva l'audio spaziale del telefono e delle cuffie (e l'SXFI integrato, se gli auricolari lo hanno), altrimenti l'effetto viene applicato due volte.
+- Senza cuffie l'audio torna normale; con uscita HDMI verso TV o amplificatore l'effetto non interviene.
+
 ### Installazione
 1. Sul dispositivo Android apri la pagina **[Releases](../../releases/latest)** e scarica il file `DVPlayer-….apk`.
 2. Apri il file scaricato. Se Android lo chiede, consenti l'installazione di app sconosciute.
@@ -79,6 +86,13 @@ DV Player also always uses the **Dolby Vision decoder** for Dolby Vision videos,
 ### New, experimental: Dolby Vision → HDR10+
 On devices **without Dolby Vision but with HDR10+** (e.g. Samsung and Google Pixel), DV Player can play Dolby Vision videos (profile 7 MEL/FEL and profile 8.1) as HDR10 with **HDR10+ dynamic metadata** derived scene by scene from the Dolby Vision metadata. It is an approximation: better than static HDR10, but not identical to Dolby Vision. If the file already carries HDR10+ metadata, the original metadata is used.
 
+### New: virtual surround for headphones
+With any headphones or earphones (wired, USB-C or Bluetooth) DV Player can make the audio sound as if it came from **real speakers in a room**: the dialogue from the screen in front of you, the surrounds at the sides and behind. It works with stereo and with 5.1/7.1 decoded by the player (AC3, E-AC3, DTS, TrueHD…). Every channel plays from a virtual speaker in a simulated room: reflections and reverb are computed and filtered with the head-related responses of the MIT KEMAR dummy head; the bass stays dry. There are three rooms: *Studio*, *Listening room* and *Large hall*.
+- Enable **Virtual surround for headphones** in the *Headphone virtual surround* section of the settings.
+- A surround icon appears in the player: **tap** it to compare with the original sound, **long press** it to change the room.
+- Turn off the spatial audio of the phone and of the headphones (and built-in SXFI, if your earphones have it), otherwise the effect is applied twice.
+- Without headphones the audio is the normal one; with HDMI output to a TV or receiver the effect stays off.
+
 ### Installation
 1. On your Android device open the **[Releases](../../releases/latest)** page and download `DVPlayer-….apk`.
 2. Open the downloaded file. If Android asks, allow installing unknown apps.
@@ -115,6 +129,7 @@ DV Player is free and ad-free. If you find it useful, you can support its develo
 - **[dovi_tool](https://github.com/quietvoid/dovi_tool)** by quietvoid – MIT License. The RPU code in `app/src/main/java/com/brouken/player/dovi/DoviRpu.java` is a Java port of parts of its `dolby_vision` crate and is tested against its reference files (`app/src/test`).
 - **[hdr10plus_tool](https://github.com/quietvoid/hdr10plus_tool)** by quietvoid – MIT License. The HDR10+ code in `app/src/main/java/com/brouken/player/dovi/Hdr10PlusMetadata.java` is a Java port of parts of its `hdr10plus` crate and is tested against its reference files.
 - **[AndroidX Media3](https://github.com/androidx/media)** – Apache License 2.0. FFmpeg audio decoders – LGPL.
+- **MIT KEMAR HRTF measurements** by Bill Gardner and Keith Martin, MIT Media Lab, 1994 ("HRTF measurements of a KEMAR", JASA 97 (6), 1995) – free to use with attribution. The headphone virtual surround uses a processed copy (`app/src/main/assets/hrir_kemar.bin`, see [`tools/hrtf`](tools/hrtf)).
 - The code added by DV Player is released under the Unlicense, like Just Player, except for the parts derived from dovi_tool and hdr10plus_tool (MIT).
 
 Dolby, Dolby Vision and the double-D symbol are trademarks of Dolby Laboratories. HDR10+ is a trademark of HDR10+ Technologies, LLC. DV Player is not affiliated with or endorsed by Dolby Laboratories or by the author of Just Player.

@@ -25,4 +25,17 @@
     <item>2</item>
     <item>0</item>
   </string-array>
+
+  <string-array name="virtual_surround_room_entries">
+    <item>@string/virtual_surround_room_studio</item>
+    <item>@string/virtual_surround_room_room</item>
+    <item>@string/virtual_surround_room_hall</item>
+  </string-array>
+
+  <!-- RoomPreset keys -->
+  <string-array name="virtual_surround_room_values">
+    <item>studio</item>
+    <item>room</item>
+    <item>hall</item>
+  </string-array>
 </resources>
