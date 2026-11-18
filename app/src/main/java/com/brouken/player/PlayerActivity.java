@@ -102,6 +102,8 @@ import androidx.media3.ui.TimeBar;
 import com.brouken.player.dovi.DoviConvertingExtractorsFactory;
 import com.brouken.player.dovi.DoviDeviceSupport;
 import com.brouken.player.dovi.DoviRenderersFactory;
+import com.brouken.player.dovi.DoviRpu;
+import com.brouken.player.dovi.Hdr10PlusMetadata;
 import com.brouken.player.dovi.DoviSampleConverter;
 import com.brouken.player.dtpv.DoubleTapPlayerView;
 import com.brouken.player.dtpv.youtube.YouTubeOverlay;
@@ -1233,8 +1235,12 @@ public class PlayerActivity extends Activity {
                 .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS)
                 .setTsExtractorTimestampSearchBytes(1500 * TsExtractor.TS_PACKET_SIZE);
         // Dolby Vision profile 7 -> 8.1 conversion wraps the extractors, see DoviConvertingExtractorsFactory
-        final ExtractorsFactory extractorsFactory = mPrefs.convertDV7ToP81
-                ? new DoviConvertingExtractorsFactory(defaultExtractorsFactory)
+        // (HDR10+ for devices without Dolby Vision takes precedence over profile 7 -> 8.1)
+        final DoviSampleConverter.Mode doviMode = mPrefs.convertDVToHdr10Plus
+                ? DoviSampleConverter.Mode.HDR10_PLUS
+                : mPrefs.convertDV7ToP81 ? DoviSampleConverter.Mode.PROFILE_8_1 : null;
+        final ExtractorsFactory extractorsFactory = doviMode != null
+                ? new DoviConvertingExtractorsFactory(defaultExtractorsFactory, doviMode)
                 : defaultExtractorsFactory;
         MediaCodecUtil.setMapDV7ToHevc(mPrefs.mapDV7ToHevc);
         // DoviRenderersFactory: use the Dolby Vision decoder for Dolby Vision content even when it
@@ -1271,7 +1277,7 @@ public class PlayerActivity extends Activity {
             player.setSkipSilenceEnabled(true);
         }
 
-        if (mPrefs.convertDV7ToP81 || mPrefs.dvDiagnostics) {
+        if (doviMode != null || mPrefs.dvDiagnostics) {
             player.addAnalyticsListener(new DoviDiagnostics(mPrefs.dvDiagnostics));
         }
 
@@ -1485,7 +1491,8 @@ public class PlayerActivity extends Activity {
             final Format format = videoFormat;
             final String decoder = decoderName;
             if (!showDialog || shown || !played || format == null || decoder == null
-                    || !MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)
+                    || !(MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)
+                            || DoviConvertingExtractorsFactory.isHdr10PlusFormat(format))
                     || player == null || player.getPlaybackState() != Player.STATE_READY) {
                 return;
             }
@@ -1502,7 +1509,29 @@ public class PlayerActivity extends Activity {
         final String yes = getString(R.string.dv_yes);
         final String no = getString(R.string.dv_no);
         final StringBuilder text = new StringBuilder();
-        if (DoviConvertingExtractorsFactory.isConvertedFormat(format)) {
+        final boolean hdr10Plus = DoviConvertingExtractorsFactory.isHdr10PlusFormat(format);
+        if (hdr10Plus) {
+            final DoviSampleConverter converter = DoviConvertingExtractorsFactory.getLastActiveConverter();
+            if (converter != null) {
+                final String elType = converter.getLastElType() != DoviRpu.ElType.NONE
+                        ? converter.getLastElType().name() : "";
+                text.append(getString(R.string.dv_diag_hdr10plus_source,
+                        String.valueOf(converter.getLastProfile()), elType)).append('\n');
+                final Hdr10PlusMetadata metadata = converter.getLastHdr10Plus();
+                text.append(getString(R.string.dv_diag_hdr10plus_sei, converter.getInsertedHdr10PlusSeiCount(),
+                        metadata != null ? metadata.getMaxScl() / 10 : 0,
+                        metadata != null ? metadata.getAverageMaxrgb() / 10 : 0)).append('\n');
+                if (converter.getExistingHdr10PlusSeiCount() > 0) {
+                    text.append(getString(R.string.dv_diag_hdr10plus_existing,
+                            converter.getExistingHdr10PlusSeiCount())).append('\n');
+                }
+                text.append(getString(R.string.dv_diag_rpu, converter.getConvertedRpuCount(),
+                        converter.getFailedRpuCount(), converter.getDroppedElNalUnitCount())).append('\n');
+                if (converter.getLastError() != null) {
+                    text.append(getString(R.string.dv_diag_error, converter.getLastError())).append('\n');
+                }
+            }
+        } else if (DoviConvertingExtractorsFactory.isConvertedFormat(format)) {
             final DoviSampleConverter converter = DoviConvertingExtractorsFactory.getLastActiveConverter();
             text.append(getString(R.string.dv_diag_converted,
                     converter != null ? converter.getLastElType().name() : "?")).append('\n');
@@ -1518,7 +1547,7 @@ public class PlayerActivity extends Activity {
         }
         final String frameRate = format.frameRate > 0
                 ? String.format(Locale.US, "%.3f", format.frameRate) : "?";
-        text.append(getString(R.string.dv_diag_format, format.codecs,
+        text.append(getString(R.string.dv_diag_format, format.codecs != null ? format.codecs : format.sampleMimeType,
                 DoviDeviceSupport.levelName(DoviDeviceSupport.levelFromCodecs(format.codecs)),
                 format.width, format.height, frameRate)).append('\n');
         final String codecMimeType = DoviRenderersFactory.getLastVideoCodecMimeType();
@@ -1526,13 +1555,19 @@ public class PlayerActivity extends Activity {
         if (MimeTypes.VIDEO_DOLBY_VISION.equals(codecMimeType)) {
             mode = "Dolby Vision";
         } else if (MimeTypes.VIDEO_H265.equals(codecMimeType)) {
-            mode = "HEVC (HDR10)";
+            mode = hdr10Plus ? "HEVC (HDR10+)" : "HEVC (HDR10)";
         } else {
             mode = codecMimeType != null ? codecMimeType : "?";
         }
         text.append(getString(R.string.dv_diag_decoder, decoder, mode)).append('\n');
+        if (hdr10Plus) {
+            text.append(getString(R.string.dv_diag_hdr10plus_profile,
+                    DoviRenderersFactory.wasHdr10PlusProfileSet() ? yes : no)).append('\n');
+        }
         text.append(getString(R.string.dv_diag_display,
-                DoviDeviceSupport.isDisplayDolbyVision(this) ? yes : no)).append("\n\n");
+                DoviDeviceSupport.isDisplayDolbyVision(this) ? yes : no)).append('\n');
+        text.append(getString(R.string.dv_diag_display_hdr10plus,
+                DoviDeviceSupport.isDisplayHdr10Plus(this) ? yes : no)).append("\n\n");
         text.append(getString(R.string.dv_diag_device));
         if (support.decoders.isEmpty()) {
             text.append("\n\u2022 ").append(getString(R.string.dv_diag_none));

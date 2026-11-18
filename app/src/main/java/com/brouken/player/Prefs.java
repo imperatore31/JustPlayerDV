@@ -47,6 +47,7 @@ class Prefs {
     private static final String PREF_KEY_DECODER_PRIORITY = "decoderPriority";
     private static final String PREF_KEY_MAP_DV7 = "mapDV7ToHevc";
     static final String PREF_KEY_CONVERT_DV7 = "convertDV7ToP81";
+    static final String PREF_KEY_CONVERT_DV_HDR10PLUS = "convertDVToHdr10Plus";
     private static final String PREF_KEY_DV_DIAGNOSTICS = "dvDiagnostics";
     private static final String PREF_KEY_LANGUAGE_AUDIO = "languageAudio";
     private static final String PREF_KEY_SUBTITLE_STYLE_EMBEDDED = "subtitleStyleEmbedded";
@@ -83,6 +84,7 @@ class Prefs {
     public int decoderPriority = DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON;
     public boolean mapDV7ToHevc = false;
     public boolean convertDV7ToP81 = false;
+    public boolean convertDVToHdr10Plus = false;
     public boolean dvDiagnostics = false;
     public String languageAudio = TRACK_DEVICE;
     public boolean subtitleStyleEmbedded = true;
@@ -96,7 +98,7 @@ class Prefs {
     public Prefs(Context context) {
         mContext = context;
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        initDefaults(mSharedPreferences);
+        initDefaults(mSharedPreferences, context);
         loadSavedPreferences();
         loadPositions();
     }
@@ -127,12 +129,20 @@ class Prefs {
 
     /**
      * Enables the Dolby Vision profile 7 to 8.1 conversion by default on devices whose Dolby Vision
-     * decoder supports profile 8 but not profile 7.
+     * decoder supports profile 8 but not profile 7, and the Dolby Vision to HDR10+ conversion on
+     * devices with HDR10+ but without Dolby Vision.
      */
-    static void initDefaults(SharedPreferences sharedPreferences) {
+    static void initDefaults(SharedPreferences sharedPreferences, Context context) {
         if (!sharedPreferences.contains(PREF_KEY_CONVERT_DV7)) {
             sharedPreferences.edit()
                     .putBoolean(PREF_KEY_CONVERT_DV7, DoviDeviceSupport.get().isConversionUseful())
+                    .apply();
+        }
+        // Dolby Vision -> HDR10+ on devices without Dolby Vision but with HDR10+ (e.g. Samsung, Pixel)
+        if (!sharedPreferences.contains(PREF_KEY_CONVERT_DV_HDR10PLUS)) {
+            sharedPreferences.edit()
+                    .putBoolean(PREF_KEY_CONVERT_DV_HDR10PLUS,
+                            DoviDeviceSupport.get().isHdr10PlusConversionUseful(context))
                     .apply();
         }
     }
@@ -147,6 +157,7 @@ class Prefs {
         decoderPriority = Integer.parseInt(mSharedPreferences.getString(PREF_KEY_DECODER_PRIORITY, String.valueOf(decoderPriority)));
         mapDV7ToHevc = mSharedPreferences.getBoolean(PREF_KEY_MAP_DV7, mapDV7ToHevc);
         convertDV7ToP81 = mSharedPreferences.getBoolean(PREF_KEY_CONVERT_DV7, convertDV7ToP81);
+        convertDVToHdr10Plus = mSharedPreferences.getBoolean(PREF_KEY_CONVERT_DV_HDR10PLUS, convertDVToHdr10Plus);
         dvDiagnostics = mSharedPreferences.getBoolean(PREF_KEY_DV_DIAGNOSTICS, dvDiagnostics);
         languageAudio = mSharedPreferences.getString(PREF_KEY_LANGUAGE_AUDIO, languageAudio);
         subtitleStyleEmbedded = mSharedPreferences.getBoolean(PREF_KEY_SUBTITLE_STYLE_EMBEDDED, subtitleStyleEmbedded);

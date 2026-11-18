@@ -110,6 +110,61 @@ public class DoviSampleConverterTest {
     }
 
     @Test
+    public void hdr10PlusModeInsertsSeiBeforeFirstSlice() throws Exception {
+        for (String asset : new String[]{"fel_orig.bin", "mel_orig.bin", "profile8.bin"}) {
+            final byte[] rpu = DoviRpuTest.assetAsNal(asset);
+            final int[] l1 = DoviRpuTest.parse(rpu).getLevel1();
+            final byte[] expectedSei = Hdr10PlusGenerator.fromLevel1(l1[0], l1[1], l1[2]).toSeiNalUnit();
+            final byte[] sample = concat(SC4, VPS, SC4, SPS, SC4, PREFIX_SEI, SC4, SLICE, SC4, SLICE, SC4, EL, SC4, rpu);
+
+            final DoviSampleConverter converter = new DoviSampleConverter(DoviSampleConverter.Mode.HDR10_PLUS);
+            final int length = converter.convert(sample, 0, sample.length);
+
+            assertArrayEquals(asset,
+                    concat(SC4, VPS, SC4, SPS, SC4, PREFIX_SEI, SC4, expectedSei, SC4, SLICE, SC4, SLICE),
+                    Arrays.copyOf(converter.getOutput(), length));
+            assertEquals(1, converter.getInsertedHdr10PlusSeiCount());
+            assertEquals(1, converter.getConvertedRpuCount());
+            assertTrue(Hdr10PlusMetadata.isHdr10PlusSei(expectedSei, 0, expectedSei.length));
+        }
+    }
+
+    @Test
+    public void hdr10PlusModeKeepsExistingHdr10Plus() throws Exception {
+        final byte[] rpu = DoviRpuTest.assetAsNal("fel_orig.bin");
+        final byte[] l1Sei;
+        {
+            final int[] l1 = DoviRpuTest.parse(rpu).getLevel1();
+            l1Sei = Hdr10PlusGenerator.fromLevel1(l1[0], l1[1], 0).toSeiNalUnit();
+        }
+        // An access unit that already carries HDR10+ (e.g. a hybrid Dolby Vision + HDR10+ file)
+        final byte[] sample = concat(SC4, VPS, SC4, l1Sei, SC4, SLICE, SC4, rpu);
+
+        final DoviSampleConverter converter = new DoviSampleConverter(DoviSampleConverter.Mode.HDR10_PLUS);
+        final int length = converter.convert(sample, 0, sample.length);
+
+        assertArrayEquals(concat(SC4, VPS, SC4, l1Sei, SC4, SLICE), Arrays.copyOf(converter.getOutput(), length));
+        assertEquals(0, converter.getInsertedHdr10PlusSeiCount());
+        assertEquals(1, converter.getExistingHdr10PlusSeiCount());
+    }
+
+    @Test
+    public void hdr10PlusModeReusesLastMetadataWhenRpuIsMissing() throws Exception {
+        final byte[] rpu = DoviRpuTest.assetAsNal("mel_orig.bin");
+        final DoviSampleConverter converter = new DoviSampleConverter(DoviSampleConverter.Mode.HDR10_PLUS);
+        final byte[] first = concat(SC4, SLICE, SC4, rpu);
+        final byte[] firstOut = Arrays.copyOf(converter.getOutput(), converter.convert(first, 0, first.length));
+        final byte[] second = concat(SC4, SLICE);
+        final byte[] secondOut = Arrays.copyOf(converter.getOutput(), converter.convert(second, 0, second.length));
+        assertArrayEquals(firstOut, secondOut);
+        assertEquals(2, converter.getInsertedHdr10PlusSeiCount());
+
+        // No Dolby Vision metadata at all: nothing to insert
+        final DoviSampleConverter fresh = new DoviSampleConverter(DoviSampleConverter.Mode.HDR10_PLUS);
+        assertArrayEquals(second, Arrays.copyOf(fresh.getOutput(), fresh.convert(second, 0, second.length)));
+    }
+
+    @Test
     public void largeSampleGrowsOutputBuffer() {
         final byte[] big = new byte[1024 * 1024];
         Arrays.fill(big, (byte) 0x55);

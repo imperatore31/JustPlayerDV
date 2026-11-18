@@ -103,6 +103,12 @@
             app:title="@string/pref_convert_dv7" />
 
         <SwitchPreferenceCompat
+            app:key="convertDVToHdr10Plus"
+            app:defaultValue="false"
+            app:summary="@string/pref_convert_dv_hdr10plus_summary"
+            app:title="@string/pref_convert_dv_hdr10plus" />
+
+        <SwitchPreferenceCompat
             app:key="dvDiagnostics"
             app:defaultValue="false"
             app:summary="@string/pref_dv_diagnostics_summary"

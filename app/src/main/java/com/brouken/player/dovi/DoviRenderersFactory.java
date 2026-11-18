@@ -1,6 +1,8 @@
 package com.brouken.player.dovi;
 
 import android.content.Context;
+import android.media.MediaCrypto;
+import android.media.MediaFormat;
 import android.os.Handler;
 
 import androidx.annotation.Nullable;
@@ -34,6 +36,8 @@ public class DoviRenderersFactory extends DefaultRenderersFactory {
     /** MIME type the last video decoder was configured with, for diagnostics. */
     @Nullable
     private static volatile String lastVideoCodecMimeType;
+    /** Whether the last video decoder was configured with the HEVC HDR10+ profile. */
+    private static volatile boolean lastHdr10PlusProfileSet;
 
     private final boolean tunnelingEnabled;
 
@@ -44,6 +48,10 @@ public class DoviRenderersFactory extends DefaultRenderersFactory {
     @Nullable
     public static String getLastVideoCodecMimeType() {
         return lastVideoCodecMimeType;
+    }
+
+    public static boolean wasHdr10PlusProfileSet() {
+        return lastHdr10PlusProfileSet;
     }
 
     public DoviRenderersFactory(Context context, boolean tunnelingEnabled) {
@@ -94,6 +102,30 @@ public class DoviRenderersFactory extends DefaultRenderersFactory {
                                           long initializedTimestampMs, long initializationDurationMs) {
             lastVideoCodecMimeType = configuration.codecInfo.codecMimeType;
             super.onCodecInitialized(name, configuration, initializedTimestampMs, initializationDurationMs);
+        }
+
+        @Override
+        protected MediaCodecAdapter.Configuration getMediaCodecConfiguration(
+                MediaCodecInfo codecInfo, Format format, @Nullable MediaCrypto crypto, float codecOperatingRate) {
+            final MediaCodecAdapter.Configuration configuration =
+                    super.getMediaCodecConfiguration(codecInfo, format, crypto, codecOperatingRate);
+            lastHdr10PlusProfileSet = false;
+            if (DoviConvertingExtractorsFactory.isHdr10PlusFormat(format) && declaresHdr10PlusProfile(codecInfo)) {
+                // Dolby Vision converted to HDR10+: tell the decoder to expect in-band HDR10+ metadata
+                configuration.mediaFormat.setInteger(MediaFormat.KEY_PROFILE,
+                        DoviDeviceSupport.HEVC_PROFILE_MAIN10_HDR10_PLUS);
+                lastHdr10PlusProfileSet = true;
+            }
+            return configuration;
+        }
+
+        private static boolean declaresHdr10PlusProfile(MediaCodecInfo codecInfo) {
+            for (android.media.MediaCodecInfo.CodecProfileLevel profileLevel : codecInfo.getProfileLevels()) {
+                if (profileLevel.profile == DoviDeviceSupport.HEVC_PROFILE_MAIN10_HDR10_PLUS) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override

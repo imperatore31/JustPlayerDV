@@ -92,6 +92,47 @@ public final class DoviRpu {
         return elType;
     }
 
+    /** Level 1 metadata {min_pq, max_pq, avg_pq} (12 bit PQ codes), or null. */
+    public int[] getLevel1() {
+        final BitReader reader = extBlockReader(1, 5);
+        if (reader == null) {
+            return null;
+        }
+        try {
+            return new int[]{reader.readInt(12), reader.readInt(12), reader.readInt(12)};
+        } catch (DoviException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Level 6 metadata {max_display_mastering_luminance, min_display_mastering_luminance,
+     * max_content_light_level, max_frame_average_light_level}, or null.
+     */
+    public int[] getLevel6() {
+        final BitReader reader = extBlockReader(6, 8);
+        if (reader == null) {
+            return null;
+        }
+        try {
+            return new int[]{reader.readInt(16), reader.readInt(16), reader.readInt(16), reader.readInt(16)};
+        } catch (DoviException e) {
+            return null;
+        }
+    }
+
+    private BitReader extBlockReader(int level, int minLength) {
+        if (dmData == null || dmData.cmv29 == null) {
+            return null;
+        }
+        for (ExtBlock block : dmData.cmv29.blocks) {
+            if (block.level == level && block.length >= minLength) {
+                return new BitReader(block.payload.data, 0, block.payload.data.length);
+            }
+        }
+        return null;
+    }
+
     // ---------------------------------------------------------------------------------------------
     // NAL unit level helpers
 

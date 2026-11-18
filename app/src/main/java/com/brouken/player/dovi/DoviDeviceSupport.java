@@ -8,12 +8,19 @@ import android.os.Build;
 import android.view.Display;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 /** Reports which Dolby Vision HEVC profiles the device decoders support. */
 public final class DoviDeviceSupport {
 
     private static final String MIME_DOLBY_VISION = "video/dolby-vision";
+    private static final String MIME_HEVC = "video/hevc";
+    /** MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus (API 29). */
+    public static final int HEVC_PROFILE_MAIN10_HDR10_PLUS = 0x2000;
+    /** Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS (API 29). */
+    private static final int HDR_TYPE_HDR10_PLUS = 4;
 
     private static volatile DoviDeviceSupport instance;
 
@@ -23,12 +30,30 @@ public final class DoviDeviceSupport {
     public final int profile8MaxLevel;
     /** Dolby Vision decoder name -> short description of its profiles/levels. */
     public final Map<String, String> decoders;
+    /** HEVC decoders declaring the HEVC Main10 HDR10+ profile. */
+    public final Set<String> hdr10PlusDecoders;
 
-    private DoviDeviceSupport(boolean profile7, boolean profile8, int profile8MaxLevel, Map<String, String> decoders) {
+    private DoviDeviceSupport(boolean profile7, boolean profile8, int profile8MaxLevel, Map<String, String> decoders,
+                              Set<String> hdr10PlusDecoders) {
         this.profile7 = profile7;
         this.profile8 = profile8;
         this.profile8MaxLevel = profile8MaxLevel;
         this.decoders = decoders;
+        this.hdr10PlusDecoders = hdr10PlusDecoders;
+    }
+
+    /**
+     * True when Dolby Vision can't be played but HDR10+ can, so converting Dolby Vision to HDR10+
+     * is worth it (e.g. Samsung and Google Pixel devices).
+     */
+    public boolean isHdr10PlusConversionUseful(Context context) {
+        final boolean dolbyVision = (profile8 || profile7) && isDisplayDolbyVision(context);
+        return !dolbyVision && (isDisplayHdr10Plus(context) || !hdr10PlusDecoders.isEmpty());
+    }
+
+    /** Whether the default display reports HDR10+ support. */
+    public static boolean isDisplayHdr10Plus(Context context) {
+        return hasHdrType(context, HDR_TYPE_HDR10_PLUS, 29);
     }
 
     public static DoviDeviceSupport get() {
@@ -51,7 +76,11 @@ public final class DoviDeviceSupport {
 
     /** Whether the default display reports Dolby Vision support (what Media3 checks too). */
     public static boolean isDisplayDolbyVision(Context context) {
-        if (Build.VERSION.SDK_INT < 26) {
+        return hasHdrType(context, Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION, 26);
+    }
+
+    private static boolean hasHdrType(Context context, int hdrType, int minSdk) {
+        if (Build.VERSION.SDK_INT < minSdk) {
             return false;
         }
         final DisplayManager displayManager = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
@@ -60,7 +89,7 @@ public final class DoviDeviceSupport {
             return false;
         }
         for (int type : display.getHdrCapabilities().getSupportedHdrTypes()) {
-            if (type == Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION) {
+            if (type == hdrType) {
                 return true;
             }
         }
@@ -120,6 +149,7 @@ public final class DoviDeviceSupport {
         boolean p8 = false;
         int p8MaxLevel = 0;
         final Map<String, String> names = new LinkedHashMap<>();
+        final Set<String> hdr10Plus = new LinkedHashSet<>();
         try {
             final MediaCodecList list = new MediaCodecList(MediaCodecList.REGULAR_CODECS);
             for (MediaCodecInfo info : list.getCodecInfos()) {
@@ -127,6 +157,15 @@ public final class DoviDeviceSupport {
                     continue;
                 }
                 for (String type : info.getSupportedTypes()) {
+                    if (MIME_HEVC.equalsIgnoreCase(type)) {
+                        for (MediaCodecInfo.CodecProfileLevel profileLevel
+                                : info.getCapabilitiesForType(type).profileLevels) {
+                            if (profileLevel.profile == HEVC_PROFILE_MAIN10_HDR10_PLUS) {
+                                hdr10Plus.add(info.getName());
+                            }
+                        }
+                        continue;
+                    }
                     if (!MIME_DOLBY_VISION.equalsIgnoreCase(type)) {
                         continue;
                     }
@@ -160,6 +199,6 @@ public final class DoviDeviceSupport {
         } catch (RuntimeException e) {
             // Some devices throw from MediaCodecList: report no support.
         }
-        return new DoviDeviceSupport(p7, p8, p8MaxLevel, names);
+        return new DoviDeviceSupport(p7, p8, p8MaxLevel, names, hdr10Plus);
     }
 }

@@ -39,26 +39,59 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
 
     private static final String TAG = "DoviP7toP81";
 
-    /** Appended to the label of converted video tracks. */
+    /** Appended to the label of video tracks converted to profile 8.1. */
     public static final String LABEL_SUFFIX = "Dolby Vision 7 → 8.1";
+    /** Appended to the label of video tracks converted to HDR10+. */
+    public static final String LABEL_SUFFIX_HDR10_PLUS = "Dolby Vision → HDR10+";
 
     /** Converter of the most recently started profile 7 track, for diagnostics. */
     @Nullable
     private static volatile DoviSampleConverter lastActiveConverter;
 
     private final ExtractorsFactory delegate;
+    private final DoviSampleConverter.Mode mode;
 
     @Nullable
     public static DoviSampleConverter getLastActiveConverter() {
         return lastActiveConverter;
     }
 
+    /** Profile 7 to 8.1 conversion. */
     public DoviConvertingExtractorsFactory(ExtractorsFactory delegate) {
-        this.delegate = delegate;
+        this(delegate, DoviSampleConverter.Mode.PROFILE_8_1);
     }
 
+    /**
+     * @param mode {@link DoviSampleConverter.Mode#PROFILE_8_1} converts profile 7 to 8.1;
+     *     {@link DoviSampleConverter.Mode#HDR10_PLUS} turns profile 7 and 8 into HEVC with HDR10+
+     *     metadata, for devices without Dolby Vision.
+     */
+    public DoviConvertingExtractorsFactory(ExtractorsFactory delegate, DoviSampleConverter.Mode mode) {
+        this.delegate = delegate;
+        this.mode = mode;
+    }
+
+    /** Whether the format is a video track converted to profile 8.1. */
     public static boolean isConvertedFormat(@Nullable Format format) {
         return format != null && format.label != null && format.label.endsWith(LABEL_SUFFIX);
+    }
+
+    /** Whether the format is a Dolby Vision video track converted to HDR10+. */
+    public static boolean isHdr10PlusFormat(@Nullable Format format) {
+        return format != null && format.label != null && format.label.endsWith(LABEL_SUFFIX_HDR10_PLUS);
+    }
+
+    /** Whether a track with this format is converted in the given mode. */
+    static boolean shouldConvert(Format format, DoviSampleConverter.Mode mode) {
+        if (!MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)) {
+            return false;
+        }
+        if (mode == DoviSampleConverter.Mode.PROFILE_8_1) {
+            return DoviSampleConverter.isProfile7Codecs(format.codecs);
+        }
+        // HDR10+ needs a PQ (HDR10 compatible) base layer: not profile 8.4 (HLG).
+        return DoviSampleConverter.isProfile7Or8Codecs(format.codecs)
+                && (format.colorInfo == null || format.colorInfo.colorTransfer != C.COLOR_TRANSFER_HLG);
     }
 
     @SuppressWarnings("deprecation")
@@ -82,18 +115,18 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
 
     @Override
     public Extractor[] createExtractors() {
-        return wrap(delegate.createExtractors());
+        return wrap(delegate.createExtractors(), mode);
     }
 
     @Override
     public Extractor[] createExtractors(Uri uri, Map<String, List<String>> responseHeaders) {
-        return wrap(delegate.createExtractors(uri, responseHeaders));
+        return wrap(delegate.createExtractors(uri, responseHeaders), mode);
     }
 
-    private static Extractor[] wrap(Extractor[] extractors) {
+    private static Extractor[] wrap(Extractor[] extractors, DoviSampleConverter.Mode mode) {
         final Extractor[] wrapped = new Extractor[extractors.length];
         for (int i = 0; i < extractors.length; i++) {
-            wrapped[i] = new ConvertingExtractor(extractors[i]);
+            wrapped[i] = new ConvertingExtractor(extractors[i], mode);
         }
         return wrapped;
     }
@@ -101,10 +134,12 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
     private static final class ConvertingExtractor implements Extractor {
 
         private final Extractor delegate;
+        private final DoviSampleConverter.Mode mode;
         private final List<ConvertingTrackOutput> trackOutputs = new ArrayList<>();
 
-        ConvertingExtractor(Extractor delegate) {
+        ConvertingExtractor(Extractor delegate, DoviSampleConverter.Mode mode) {
             this.delegate = delegate;
+            this.mode = mode;
         }
 
         @Override
@@ -119,7 +154,7 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
 
         @Override
         public void init(ExtractorOutput output) {
-            delegate.init(new ConvertingExtractorOutput(output, trackOutputs));
+            delegate.init(new ConvertingExtractorOutput(output, trackOutputs, mode));
         }
 
         @Override
@@ -153,10 +188,13 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
 
         private final ExtractorOutput delegate;
         private final List<ConvertingTrackOutput> trackOutputs;
+        private final DoviSampleConverter.Mode mode;
 
-        ConvertingExtractorOutput(ExtractorOutput delegate, List<ConvertingTrackOutput> trackOutputs) {
+        ConvertingExtractorOutput(ExtractorOutput delegate, List<ConvertingTrackOutput> trackOutputs,
+                                  DoviSampleConverter.Mode mode) {
             this.delegate = delegate;
             this.trackOutputs = trackOutputs;
+            this.mode = mode;
         }
 
         @Override
@@ -165,7 +203,7 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
             if (type != C.TRACK_TYPE_VIDEO) {
                 return trackOutput;
             }
-            final ConvertingTrackOutput converting = new ConvertingTrackOutput(trackOutput);
+            final ConvertingTrackOutput converting = new ConvertingTrackOutput(trackOutput, mode);
             trackOutputs.add(converting);
             return converting;
         }
@@ -189,7 +227,8 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
         // Package-private so that it can be tested with the real Media3 classes.
 
         private final TrackOutput delegate;
-        private final DoviSampleConverter converter = new DoviSampleConverter();
+        private final DoviSampleConverter.Mode mode;
+        private final DoviSampleConverter converter;
         private final ParsableByteArray scratch = new ParsableByteArray();
         private final byte[] sizePrefix = new byte[4];
 
@@ -199,7 +238,13 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
         private boolean pendingHasOtherParts;
 
         ConvertingTrackOutput(TrackOutput delegate) {
+            this(delegate, DoviSampleConverter.Mode.PROFILE_8_1);
+        }
+
+        ConvertingTrackOutput(TrackOutput delegate, DoviSampleConverter.Mode mode) {
             this.delegate = delegate;
+            this.mode = mode;
+            this.converter = new DoviSampleConverter(mode);
         }
 
         void reset() {
@@ -214,9 +259,7 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
 
         @Override
         public void format(Format format) {
-            final boolean convert = MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)
-                    && DoviSampleConverter.isProfile7Codecs(format.codecs);
-            if (!convert) {
+            if (!shouldConvert(format, mode)) {
                 if (active) {
                     flushPendingUnchanged();
                     active = false;
@@ -226,13 +269,24 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
             }
             active = true;
             lastActiveConverter = converter;
-            final String label = format.label == null ? LABEL_SUFFIX : format.label + " - " + LABEL_SUFFIX;
-            final Format converted = format.buildUpon()
-                    .setCodecs(DoviSampleConverter.convertCodecsString(format.codecs))
-                    .setInitializationData(DoviSampleConverter.filterInitializationData(format.initializationData))
-                    .setLabel(label)
-                    .build();
-            Log.i(TAG, "Converting Dolby Vision " + format.codecs + " to " + converted.codecs);
+            final Format converted;
+            if (mode == DoviSampleConverter.Mode.HDR10_PLUS) {
+                // Plain HEVC (HDR10 base layer) with in-band HDR10+ metadata.
+                converted = format.buildUpon()
+                        .setSampleMimeType(MimeTypes.VIDEO_H265)
+                        .setCodecs(null)
+                        .setInitializationData(DoviSampleConverter.filterInitializationData(format.initializationData))
+                        .setLabel(appendLabel(format.label, LABEL_SUFFIX_HDR10_PLUS))
+                        .build();
+            } else {
+                converted = format.buildUpon()
+                        .setCodecs(DoviSampleConverter.convertCodecsString(format.codecs))
+                        .setInitializationData(DoviSampleConverter.filterInitializationData(format.initializationData))
+                        .setLabel(appendLabel(format.label, LABEL_SUFFIX))
+                        .build();
+            }
+            Log.i(TAG, "Converting Dolby Vision " + format.codecs + " to "
+                    + (mode == DoviSampleConverter.Mode.HDR10_PLUS ? "HEVC + HDR10+" : converted.codecs));
             delegate.format(converted);
         }
 
@@ -341,6 +395,10 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
                     | ((data[offset + 2] & 0xFF) << 8) | (data[offset + 3] & 0xFF);
         }
 
+        private static String appendLabel(@Nullable String label, String suffix) {
+            return label == null ? suffix : label + " - " + suffix;
+        }
+
         private void forward(byte[] data, int offset, int length, int sampleDataPart) {
             if (length <= 0) {
                 return;
@@ -379,6 +437,7 @@ public final class DoviConvertingExtractorsFactory implements ExtractorsFactory 
                     + " rpuFailed=" + converter.getFailedRpuCount()
                     + " elNalDropped=" + converter.getDroppedElNalUnitCount()
                     + " elType=" + converter.getLastElType()
+                    + " hdr10PlusSei=" + converter.getInsertedHdr10PlusSeiCount()
                     + (converter.getLastError() != null ? " lastError=" + converter.getLastError() : ""));
         }
     }

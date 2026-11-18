@@ -77,4 +77,12 @@
     <string name="dv_diag_none">none</string>
     <string name="dv_yes">yes</string>
     <string name="dv_no">no</string>
+    <string name="pref_convert_dv_hdr10plus">Convert Dolby Vision to HDR10+ (experimental)</string>
+    <string name="pref_convert_dv_hdr10plus_summary">For devices without Dolby Vision: play Dolby Vision (profile 7 and 8.1) as HDR10 with HDR10+ dynamic metadata derived from the Dolby Vision metadata. Takes precedence over the profile 8.1 conversion.</string>
+    <string name="pref_hdr10plus_device">This device: HDR10+ display %1$s, HDR10+ decoder %2$s</string>
+    <string name="dv_diag_hdr10plus_source">Source: Dolby Vision profile %1$s %2$s, converted to HDR10+</string>
+    <string name="dv_diag_hdr10plus_sei">HDR10+ metadata inserted: %1$d (current scene: peak %2$d nits, average %3$d nits)</string>
+    <string name="dv_diag_hdr10plus_existing">The video already carries HDR10+: original metadata kept (%1$d frames)</string>
+    <string name="dv_diag_hdr10plus_profile">Decoder configured for HDR10+: %1$s</string>
+    <string name="dv_diag_display_hdr10plus">Screen reports HDR10+: %1$s</string>
 </resources>

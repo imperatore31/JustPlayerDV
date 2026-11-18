@@ -83,7 +83,7 @@ public class SettingsActivity extends AppCompatActivity {
     public static class SettingsFragment extends PreferenceFragmentCompat {
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-            Prefs.initDefaults(getPreferenceManager().getSharedPreferences());
+            Prefs.initDefaults(getPreferenceManager().getSharedPreferences(), requireContext());
             setPreferencesFromResource(R.xml.root_preferences, rootKey);
 
             Preference preferenceConvertDV7 = findPreference(Prefs.PREF_KEY_CONVERT_DV7);
@@ -93,6 +93,15 @@ public class SettingsActivity extends AppCompatActivity {
                         + getString(R.string.pref_convert_dv7_device,
                         getString(doviSupport.profile8 ? R.string.dv_supported : R.string.dv_not_supported),
                         getString(doviSupport.profile7 ? R.string.dv_supported : R.string.dv_not_supported)));
+            }
+
+            Preference preferenceHdr10Plus = findPreference(Prefs.PREF_KEY_CONVERT_DV_HDR10PLUS);
+            if (preferenceHdr10Plus != null) {
+                final DoviDeviceSupport doviSupport = DoviDeviceSupport.get();
+                preferenceHdr10Plus.setSummary(getString(R.string.pref_convert_dv_hdr10plus_summary) + "\n"
+                        + getString(R.string.pref_hdr10plus_device,
+                        getString(DoviDeviceSupport.isDisplayHdr10Plus(requireContext()) ? R.string.dv_supported : R.string.dv_not_supported),
+                        getString(!doviSupport.hdr10PlusDecoders.isEmpty() ? R.string.dv_supported : R.string.dv_not_supported)));
             }
 
             Preference preferenceAutoPiP = findPreference("autoPiP");

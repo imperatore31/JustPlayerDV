@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import androidx.media3.common.C;
+import androidx.media3.common.ColorInfo;
 import androidx.media3.common.DataReader;
 import androidx.media3.common.Format;
 import androidx.media3.common.MimeTypes;
@@ -230,6 +231,62 @@ public class DoviConvertingTrackOutputTest {
             assertArrayEquals(accessUnit, capture.samples.get(0));
             assertEquals(codecs, capture.format.codecs);
         }
+    }
+
+    @Test
+    public void hdr10PlusModeTurnsDolbyVisionIntoHevcWithHdr10Plus() throws Exception {
+        createAccessUnit();
+        final byte[] rpu = DoviRpuTest.assetAsNal("fel_orig.bin");
+        final int[] l1 = DoviRpuTest.parse(rpu).getLevel1();
+        final byte[] sei = Hdr10PlusGenerator.fromLevel1(l1[0], l1[1], l1[2]).toSeiNalUnit();
+        final byte[] expectedSample = concat(SC, sei, SC, slice);
+
+        for (String codecs : new String[]{"dvhe.07.06", "dvhe.08.06"}) {
+            final CapturingTrackOutput capture = new CapturingTrackOutput();
+            final TrackOutput output = new DoviConvertingExtractorsFactory.ConvertingTrackOutput(
+                    capture, DoviSampleConverter.Mode.HDR10_PLUS);
+            output.format(new Format.Builder()
+                    .setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION)
+                    .setCodecs(codecs)
+                    .setInitializationData(Collections.singletonList(concat(SC, VPS, SC, EL)))
+                    .build());
+            assertEquals(MimeTypes.VIDEO_H265, capture.format.sampleMimeType);
+            assertEquals(null, capture.format.codecs);
+            assertArrayEquals(concat(SC, VPS), capture.format.initializationData.get(0));
+            assertTrue(DoviConvertingExtractorsFactory.isHdr10PlusFormat(capture.format));
+
+            output.sampleData(new ParsableByteArray(accessUnit), accessUnit.length);
+            output.sampleMetadata(0, C.BUFFER_FLAG_KEY_FRAME, accessUnit.length, 0, null);
+            assertArrayEquals(codecs, expectedSample, capture.samples.get(0));
+        }
+    }
+
+    @Test
+    public void hdr10PlusModeSkipsHlgAndProfile7OnlyModeSkipsProfile8() throws Exception {
+        createAccessUnit();
+        // Profile 8.4 (HLG base layer): not converted to HDR10+
+        final CapturingTrackOutput hlg = new CapturingTrackOutput();
+        final TrackOutput hlgOutput = new DoviConvertingExtractorsFactory.ConvertingTrackOutput(
+                hlg, DoviSampleConverter.Mode.HDR10_PLUS);
+        hlgOutput.format(new Format.Builder()
+                .setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION)
+                .setCodecs("dvhe.08.06")
+                .setColorInfo(new ColorInfo.Builder().setColorTransfer(C.COLOR_TRANSFER_HLG).build())
+                .build());
+        hlgOutput.sampleData(new ParsableByteArray(accessUnit), accessUnit.length);
+        hlgOutput.sampleMetadata(0, C.BUFFER_FLAG_KEY_FRAME, accessUnit.length, 0, null);
+        assertEquals(MimeTypes.VIDEO_DOLBY_VISION, hlg.format.sampleMimeType);
+        assertArrayEquals(accessUnit, hlg.samples.get(0));
+
+        assertTrue(DoviConvertingExtractorsFactory.shouldConvert(new Format.Builder()
+                .setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION).setCodecs("dvhe.08.06").build(),
+                DoviSampleConverter.Mode.HDR10_PLUS));
+        assertTrue(!DoviConvertingExtractorsFactory.shouldConvert(new Format.Builder()
+                .setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION).setCodecs("dvhe.08.06").build(),
+                DoviSampleConverter.Mode.PROFILE_8_1));
+        assertTrue(!DoviConvertingExtractorsFactory.shouldConvert(new Format.Builder()
+                .setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION).setCodecs("dvhe.05.06").build(),
+                DoviSampleConverter.Mode.HDR10_PLUS));
     }
 
     @Test

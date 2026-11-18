@@ -28,6 +28,9 @@ Funziona anche con lo streaming: per esempio da **Emby / Jellyfin / Plex** in *D
 
 In più DV Player usa sempre il **decoder Dolby Vision** per i video Dolby Vision, anche quando il dispositivo dichiara capacità inferiori a quelle reali (per esempio "P8 FHD 30" su un tablet che riproduce senza problemi il 4K). Just Player 0.219 in questi casi riproduce il 4K Dolby Vision in semplice HDR10.
 
+### Novità sperimentale: Dolby Vision → HDR10+
+Sui dispositivi **senza Dolby Vision ma con HDR10+** (per esempio Samsung e Google Pixel), DV Player può riprodurre i video Dolby Vision (profilo 7 MEL/FEL e profilo 8.1) come HDR10 con **metadati dinamici HDR10+** ricavati scena per scena da quelli Dolby Vision. Il risultato è un'approssimazione: migliore dell'HDR10 statico, ma non identico al Dolby Vision. Se il file contiene già metadati HDR10+, vengono usati quelli originali.
+
 ### Installazione
 1. Sul dispositivo Android apri la pagina **[Releases](../../releases/latest)** e scarica il file `DVPlayer-….apk`.
 2. Apri il file scaricato. Se Android lo chiede, consenti l'installazione di app sconosciute.
@@ -42,7 +45,8 @@ DV Player si installa accanto a Just Player, senza sostituirlo.
 ### Impostazioni
 Avvia un video, tocca lo schermo e **tieni premuta** l'icona dell'ingranaggio ⚙️ in basso a destra. In fondo all'elenco:
 - **Converti Dolby Vision profilo 7 in 8.1**: attiva di default sui dispositivi che supportano il profilo 8 ma non il 7. Sotto è indicato cosa supporta il dispositivo.
-- **Diagnostica Dolby Vision**: se attiva, alla prima pausa di un video Dolby Vision mostra il decoder usato, la modalità (Dolby Vision o HDR10) e quanti metadati sono stati convertiti.
+- **Converti Dolby Vision in HDR10+ (sperimentale)**: attiva di default sui dispositivi con HDR10+ ma senza Dolby Vision; ha la precedenza sulla conversione nel profilo 8.1.
+- **Diagnostica Dolby Vision**: se attiva, alla prima pausa di un video Dolby Vision mostra il decoder usato, la modalità (Dolby Vision, HDR10+ o HDR10) e quanti metadati sono stati convertiti.
 
 ### Limiti
 - Solo profilo 7 a traccia singola (strato base + miglioramento + RPU nella stessa traccia, come nei remux MakeMKV). I file con lo strato di miglioramento in una traccia separata non sono supportati.
@@ -71,6 +75,9 @@ It also works when streaming, e.g. from **Emby / Jellyfin / Plex** with *Direct 
 
 DV Player also always uses the **Dolby Vision decoder** for Dolby Vision videos, even when the device declares lower capabilities than it actually has (e.g. "P8 FHD 30" on a tablet that plays 4K just fine). In that case Just Player 0.219 plays 4K Dolby Vision as plain HDR10.
 
+### New, experimental: Dolby Vision → HDR10+
+On devices **without Dolby Vision but with HDR10+** (e.g. Samsung and Google Pixel), DV Player can play Dolby Vision videos (profile 7 MEL/FEL and profile 8.1) as HDR10 with **HDR10+ dynamic metadata** derived scene by scene from the Dolby Vision metadata. It is an approximation: better than static HDR10, but not identical to Dolby Vision. If the file already carries HDR10+ metadata, the original metadata is used.
+
 ### Installation
 1. On your Android device open the **[Releases](../../releases/latest)** page and download `DVPlayer-….apk`.
 2. Open the downloaded file. If Android asks, allow installing unknown apps.
@@ -85,7 +92,8 @@ DV Player installs next to Just Player, it does not replace it.
 ### Settings
 Start a video, tap the screen and **long press** the ⚙️ gear icon at the bottom right. At the end of the list:
 - **Convert Dolby Vision profile 7 to 8.1**: enabled by default on devices that support profile 8 but not profile 7. The device capabilities are shown below it.
-- **Dolby Vision diagnostics**: when enabled, the first pause of a Dolby Vision video shows the decoder in use, the mode (Dolby Vision or HDR10) and how many RPUs were converted.
+- **Convert Dolby Vision to HDR10+ (experimental)**: enabled by default on devices with HDR10+ but without Dolby Vision; takes precedence over the profile 8.1 conversion.
+- **Dolby Vision diagnostics**: when enabled, the first pause of a Dolby Vision video shows the decoder in use, the mode (Dolby Vision, HDR10+ or HDR10) and how many RPUs were converted.
 
 ### Limitations
 - Single-track profile 7 only (base layer + enhancement layer + RPU in one track, as in MakeMKV remuxes). Dual-track files are not supported.
@@ -103,7 +111,8 @@ DV Player is free and ad-free. If you find it useful, you can support its develo
 
 - **[Just (Video) Player](https://github.com/moneytoo/Player)** by Marcel Dopita – [Unlicense](LICENSE). DV Player is based on Just Player 0.219; see its page for the full list of player features.
 - **[dovi_tool](https://github.com/quietvoid/dovi_tool)** by quietvoid – MIT License. The RPU code in `app/src/main/java/com/brouken/player/dovi/DoviRpu.java` is a Java port of parts of its `dolby_vision` crate and is tested against its reference files (`app/src/test`).
+- **[hdr10plus_tool](https://github.com/quietvoid/hdr10plus_tool)** by quietvoid – MIT License. The HDR10+ code in `app/src/main/java/com/brouken/player/dovi/Hdr10PlusMetadata.java` is a Java port of parts of its `hdr10plus` crate and is tested against its reference files.
 - **[AndroidX Media3](https://github.com/androidx/media)** – Apache License 2.0. FFmpeg audio decoders – LGPL.
-- The code added by DV Player is released under the Unlicense, like Just Player, except for the parts derived from dovi_tool (MIT).
+- The code added by DV Player is released under the Unlicense, like Just Player, except for the parts derived from dovi_tool and hdr10plus_tool (MIT).
 
-Dolby, Dolby Vision and the double-D symbol are trademarks of Dolby Laboratories. DV Player is not affiliated with or endorsed by Dolby Laboratories or by the author of Just Player.
+Dolby, Dolby Vision and the double-D symbol are trademarks of Dolby Laboratories. HDR10+ is a trademark of HDR10+ Technologies, LLC. DV Player is not affiliated with or endorsed by Dolby Laboratories or by the author of Just Player.
