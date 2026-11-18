@@ -44,6 +44,7 @@ public final class DoviSampleConverter {
     private volatile long insertedHdr10PlusSei;
     private volatile long existingHdr10PlusSei;
     private volatile Hdr10PlusMetadata lastHdr10Plus;
+    private volatile boolean lastHdr10PlusFromFile;
     private volatile int lastProfile;
 
     public DoviSampleConverter() {
@@ -127,6 +128,7 @@ public final class DoviSampleConverter {
 
         // The RPU is at the end of the access unit: read it before writing anything.
         boolean hasHdr10Plus = false;
+        int hdr10PlusNal = -1;
         boolean rpuParsed = false;
         for (int i = 0; i < count; i++) {
             final int start = nalStarts[i];
@@ -138,15 +140,23 @@ public final class DoviSampleConverter {
             if (nalType == NAL_UNSPEC62 && !rpuParsed) {
                 rpuParsed = true;
                 readRpu(data, start, nalLength);
-            } else if (nalType == Hdr10PlusMetadata.NAL_SEI_PREFIX
+            } else if (!hasHdr10Plus && nalType == Hdr10PlusMetadata.NAL_SEI_PREFIX
                     && Hdr10PlusMetadata.isHdr10PlusSei(data, start, nalLength)) {
                 hasHdr10Plus = true;
+                hdr10PlusNal = i;
             }
         }
 
         byte[] sei = null;
         if (hasHdr10Plus) {
+            // Hybrid file (Dolby Vision + HDR10+): keep the original HDR10+ metadata.
             existingHdr10PlusSei++;
+            final Hdr10PlusMetadata original = Hdr10PlusMetadata.parseSei(
+                    data, nalStarts[hdr10PlusNal], nalEnds[hdr10PlusNal] - nalStarts[hdr10PlusNal]);
+            if (original != null) {
+                lastHdr10Plus = original;
+                lastHdr10PlusFromFile = true;
+            }
         } else {
             final Hdr10PlusMetadata metadata;
             if (lastLevel1 != null) {
@@ -159,6 +169,7 @@ public final class DoviSampleConverter {
             if (metadata != null) {
                 sei = metadata.toSeiNalUnit();
                 lastHdr10Plus = metadata;
+                lastHdr10PlusFromFile = false;
             }
         }
 
@@ -245,9 +256,14 @@ public final class DoviSampleConverter {
         return existingHdr10PlusSei;
     }
 
-    /** The last generated HDR10+ metadata, or null. */
+    /** The HDR10+ metadata of the last frame (generated, or the file's own), or null. */
     public Hdr10PlusMetadata getLastHdr10Plus() {
         return lastHdr10Plus;
+    }
+
+    /** Whether {@link #getLastHdr10Plus()} comes from the file (hybrid Dolby Vision + HDR10+). */
+    public boolean isLastHdr10PlusFromFile() {
+        return lastHdr10PlusFromFile;
     }
 
     /** Dolby Vision profile of the last RPU (HDR10+ mode). */

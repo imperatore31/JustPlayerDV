@@ -79,6 +79,7 @@ public class Hdr10PlusTest {
             final Hdr10PlusMetadata metadata = Hdr10PlusMetadata.parse(payload, 0, payload.length);
             metadata.validate();
             assertArrayEquals(nal, metadata.toSeiNalUnit());
+            assertArrayEquals(payload, Hdr10PlusMetadata.parseSei(nal, 0, nal.length).encode());
         }
     }
 

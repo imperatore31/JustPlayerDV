@@ -1452,8 +1452,8 @@ public class PlayerActivity extends Activity {
 
     /**
      * Collects how a Dolby Vision video is played and, with diagnostics enabled, shows it in a dialog
-     * the first time playback is paused. Nothing is drawn over the video while it plays, since an
-     * overlay can make the display leave Dolby Vision mode.
+     * whenever playback is paused. Nothing is drawn over the video while it plays, since an overlay
+     * can make the display leave Dolby Vision mode.
      */
     private class DoviDiagnostics implements AnalyticsListener {
         private final boolean showDialog;
@@ -1462,7 +1462,6 @@ public class PlayerActivity extends Activity {
         @Nullable
         private String decoderName;
         private boolean played;
-        private boolean shown;
 
         DoviDiagnostics(boolean showDialog) {
             this.showDialog = showDialog;
@@ -1479,7 +1478,6 @@ public class PlayerActivity extends Activity {
                                               long initializedTimestampMs, long initializationDurationMs) {
             this.decoderName = decoderName;
             played = false;
-            shown = false;
         }
 
         @Override
@@ -1490,16 +1488,21 @@ public class PlayerActivity extends Activity {
             }
             final Format format = videoFormat;
             final String decoder = decoderName;
-            if (!showDialog || shown || !played || format == null || decoder == null
+            if (!showDialog || !played || format == null || decoder == null
                     || !(MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)
                             || DoviConvertingExtractorsFactory.isHdr10PlusFormat(format))
-                    || player == null || player.getPlaybackState() != Player.STATE_READY) {
+                    || player == null || player.getPlaybackState() != Player.STATE_READY
+                    // only when the user pauses, not when the app goes to the background
+                    || !hasWindowFocus()
+                    || (doviDiagnosticsDialog != null && doviDiagnosticsDialog.isShowing())) {
                 return;
             }
-            shown = true;
             showDoviDiagnostics(format, decoder);
         }
     }
+
+    @Nullable
+    private AlertDialog doviDiagnosticsDialog;
 
     private void showDoviDiagnostics(Format format, String decoder) {
         if (isFinishing() || isDestroyed()) {
@@ -1513,17 +1516,24 @@ public class PlayerActivity extends Activity {
         if (hdr10Plus) {
             final DoviSampleConverter converter = DoviConvertingExtractorsFactory.getLastActiveConverter();
             if (converter != null) {
-                final String elType = converter.getLastElType() != DoviRpu.ElType.NONE
-                        ? converter.getLastElType().name() : "";
-                text.append(getString(R.string.dv_diag_hdr10plus_source,
-                        String.valueOf(converter.getLastProfile()), elType)).append('\n');
+                final String profile = converter.getLastProfile()
+                        + (converter.getLastElType() != DoviRpu.ElType.NONE ? " " + converter.getLastElType().name() : "");
+                text.append(getString(R.string.dv_diag_hdr10plus_source, profile)).append('\n');
                 final Hdr10PlusMetadata metadata = converter.getLastHdr10Plus();
-                text.append(getString(R.string.dv_diag_hdr10plus_sei, converter.getInsertedHdr10PlusSeiCount(),
-                        metadata != null ? metadata.getMaxScl() / 10 : 0,
-                        metadata != null ? metadata.getAverageMaxrgb() / 10 : 0)).append('\n');
+                final long peak = metadata != null ? metadata.getMaxScl() / 10 : 0;
+                final long average = metadata != null ? metadata.getAverageMaxrgb() / 10 : 0;
+                if (converter.getInsertedHdr10PlusSeiCount() > 0) {
+                    text.append(getString(R.string.dv_diag_hdr10plus_sei,
+                            converter.getInsertedHdr10PlusSeiCount())).append('\n');
+                }
                 if (converter.getExistingHdr10PlusSeiCount() > 0) {
                     text.append(getString(R.string.dv_diag_hdr10plus_existing,
                             converter.getExistingHdr10PlusSeiCount())).append('\n');
+                }
+                if (metadata != null) {
+                    text.append(getString(converter.isLastHdr10PlusFromFile()
+                            ? R.string.dv_diag_hdr10plus_scene_file : R.string.dv_diag_hdr10plus_scene,
+                            peak, average)).append('\n');
                 }
                 text.append(getString(R.string.dv_diag_rpu, converter.getConvertedRpuCount(),
                         converter.getFailedRpuCount(), converter.getDroppedElNalUnitCount())).append('\n');
@@ -1547,9 +1557,14 @@ public class PlayerActivity extends Activity {
         }
         final String frameRate = format.frameRate > 0
                 ? String.format(Locale.US, "%.3f", format.frameRate) : "?";
-        text.append(getString(R.string.dv_diag_format, format.codecs != null ? format.codecs : format.sampleMimeType,
-                DoviDeviceSupport.levelName(DoviDeviceSupport.levelFromCodecs(format.codecs)),
-                format.width, format.height, frameRate)).append('\n');
+        if (format.codecs != null) {
+            text.append(getString(R.string.dv_diag_format, format.codecs,
+                    DoviDeviceSupport.levelName(DoviDeviceSupport.levelFromCodecs(format.codecs)),
+                    format.width, format.height, frameRate)).append('\n');
+        } else {
+            text.append(getString(R.string.dv_diag_format_plain, "HEVC",
+                    format.width, format.height, frameRate)).append('\n');
+        }
         final String codecMimeType = DoviRenderersFactory.getLastVideoCodecMimeType();
         final String mode;
         if (MimeTypes.VIDEO_DOLBY_VISION.equals(codecMimeType)) {
@@ -1575,7 +1590,7 @@ public class PlayerActivity extends Activity {
         for (Map.Entry<String, String> entry : support.decoders.entrySet()) {
             text.append("\n\u2022 ").append(entry.getKey()).append(": ").append(entry.getValue());
         }
-        new AlertDialog.Builder(this)
+        doviDiagnosticsDialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.dv_diag_title)
                 .setMessage(text)
                 .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> dialogInterface.dismiss())

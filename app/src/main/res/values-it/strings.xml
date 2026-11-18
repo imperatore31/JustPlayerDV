@@ -63,7 +63,7 @@
     <string name="dv_supported">supportato</string>
     <string name="dv_not_supported">non supportato</string>
     <string name="pref_dv_diagnostics">Diagnostica Dolby Vision</string>
-    <string name="pref_dv_diagnostics_summary">Mostra il decoder e i dettagli della conversione la prima volta che metti in pausa un video Dolby Vision</string>
+    <string name="pref_dv_diagnostics_summary">Mostra il decoder e i dettagli della conversione quando metti in pausa un video Dolby Vision</string>
     <string name="dv_diag_title">Diagnostica Dolby Vision</string>
     <string name="dv_diag_converted">Origine: profilo 7 %1$s, convertito in 8.1</string>
     <string name="dv_diag_native">Origine: Dolby Vision (non convertito)</string>
@@ -79,9 +79,12 @@
     <string name="pref_convert_dv_hdr10plus">Converti Dolby Vision in HDR10+ (sperimentale)</string>
     <string name="pref_convert_dv_hdr10plus_summary">Per i dispositivi senza Dolby Vision: riproduce il Dolby Vision (profilo 7 e 8.1) in HDR10 con metadati dinamici HDR10+ ricavati da quelli Dolby Vision. Ha la precedenza sulla conversione nel profilo 8.1.</string>
     <string name="pref_hdr10plus_device">Questo dispositivo: schermo HDR10+ %1$s, decoder HDR10+ %2$s</string>
-    <string name="dv_diag_hdr10plus_source">Origine: Dolby Vision profilo %1$s %2$s, convertito in HDR10+</string>
-    <string name="dv_diag_hdr10plus_sei">Metadati HDR10+ inseriti: %1$d (scena attuale: picco %2$d nit, media %3$d nit)</string>
-    <string name="dv_diag_hdr10plus_existing">Il video contiene già HDR10+: mantenuti i metadati originali (%1$d fotogrammi)</string>
+    <string name="dv_diag_hdr10plus_source">Origine: Dolby Vision profilo %1$s, convertito in HDR10+</string>
+    <string name="dv_diag_hdr10plus_sei">Metadati HDR10+ ricavati dal Dolby Vision: %1$d fotogrammi</string>
+    <string name="dv_diag_hdr10plus_existing">Il file contiene già HDR10+ (ibrido Dolby Vision + HDR10+): usati i metadati originali, %1$d fotogrammi</string>
     <string name="dv_diag_hdr10plus_profile">Decoder impostato per HDR10+: %1$s</string>
     <string name="dv_diag_display_hdr10plus">Lo schermo dichiara l\'HDR10+: %1$s</string>
+    <string name="dv_diag_hdr10plus_scene">Scena attuale (HDR10+ ricavato): picco %1$d nit, media %2$d nit</string>
+    <string name="dv_diag_hdr10plus_scene_file">Scena attuale (HDR10+ originale): picco %1$d nit, media %2$d nit</string>
+    <string name="dv_diag_format_plain">Video: %1$s, %2$dx%3$d, %4$s fps</string>
 </resources>

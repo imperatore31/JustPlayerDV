@@ -287,6 +287,28 @@ public final class Hdr10PlusMetadata {
             return false;
         }
         final byte[] rbsp = DoviRpu.clearEmulationPrevention(data, offset + 2, length - 2);
+        return findHdr10PlusPayload(rbsp) != null;
+    }
+
+    /** Parses the HDR10+ metadata of a prefix SEI NAL unit (without start code), or returns null. */
+    static Hdr10PlusMetadata parseSei(byte[] data, int offset, int length) {
+        if (length < 3 || ((data[offset] >> 1) & 0x3F) != NAL_SEI_PREFIX) {
+            return null;
+        }
+        final byte[] rbsp = DoviRpu.clearEmulationPrevention(data, offset + 2, length - 2);
+        final int[] payload = findHdr10PlusPayload(rbsp);
+        if (payload == null) {
+            return null;
+        }
+        try {
+            return parse(rbsp, payload[0], Math.min(payload[1], rbsp.length - payload[0]));
+        } catch (DoviException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** Returns {offset, size} of the HDR10+ user_data_registered_itu_t_t35 payload in a SEI RBSP. */
+    private static int[] findHdr10PlusPayload(byte[] rbsp) {
         int position = 0;
         while (position < rbsp.length && (rbsp[position] & 0xFF) != 0x80) {
             int type = 0;
@@ -295,7 +317,7 @@ public final class Hdr10PlusMetadata {
                 position++;
             }
             if (position >= rbsp.length) {
-                return false;
+                return null;
             }
             type += rbsp[position++] & 0xFF;
             int size = 0;
@@ -304,7 +326,7 @@ public final class Hdr10PlusMetadata {
                 position++;
             }
             if (position >= rbsp.length) {
-                return false;
+                return null;
             }
             size += rbsp[position++] & 0xFF;
             if (type == SEI_USER_DATA_REGISTERED_ITU_T_T35 && size >= 7 && position + 7 <= rbsp.length
@@ -312,10 +334,10 @@ public final class Hdr10PlusMetadata {
                     && (rbsp[position + 1] & 0xFF) == 0x00 && (rbsp[position + 2] & 0xFF) == TERMINAL_PROVIDER_CODE
                     && (rbsp[position + 3] & 0xFF) == 0x00 && (rbsp[position + 4] & 0xFF) == TERMINAL_PROVIDER_ORIENTED_CODE
                     && (rbsp[position + 5] & 0xFF) == APPLICATION_IDENTIFIER) {
-                return true;
+                return new int[]{position, size};
             }
             position += size;
         }
-        return false;
+        return null;
     }
 }

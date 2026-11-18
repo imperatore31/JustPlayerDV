@@ -146,6 +146,10 @@ public class DoviSampleConverterTest {
         assertArrayEquals(concat(SC4, VPS, SC4, l1Sei, SC4, SLICE), Arrays.copyOf(converter.getOutput(), length));
         assertEquals(0, converter.getInsertedHdr10PlusSeiCount());
         assertEquals(1, converter.getExistingHdr10PlusSeiCount());
+        // The file's own HDR10+ metadata is reported for diagnostics
+        assertTrue(converter.isLastHdr10PlusFromFile());
+        assertArrayEquals(Hdr10PlusMetadata.parseSei(l1Sei, 0, l1Sei.length).encode(),
+                converter.getLastHdr10Plus().encode());
     }
 
     @Test
