@@ -34,13 +34,20 @@ final class BrirGenerator {
     /** Highest density of the synthetic tail reflections, per second. */
     private static final double MAX_TAIL_DENSITY = 8000;
     /** One-pole low-pass coefficient (at 48 kHz) applied for each wall reflection. */
-    private static final double WALL_DAMPING_48K = 0.2;
+    private static final double WALL_DAMPING_48K = 0.1;
+    /**
+     * Absorption of each surface relative to the average (left, right, back, front, floor,
+     * ceiling walls): a real room is not symmetric (windows, curtains, furniture). With a
+     * symmetric room and a listener in the middle, the reflections reach both ears identically
+     * and a centre speaker is heard inside the head.
+     */
+    private static final double[] WALL_ABSORPTION = {0.7, 1.3, 1.2, 0.9, 0.8, 1.1};
     /**
      * Below this frequency the room is left out: the bass of each speaker reaches the ears
      * directly (it carries no direction cues, and the image sources of a rectangular room would
      * add up to a boomy, uneven low end).
      */
-    private static final double BASS_CROSSOVER = 100;
+    private static final double BASS_CROSSOVER = 150;
     /** Mean square directivity of the speaker model over all directions (diffuse field). */
     private static final double MEAN_SQUARE_DIRECTIVITY = 0.49 + 0.09 / 3;
 
@@ -75,10 +82,21 @@ final class BrirGenerator {
         // Eyring: uniform absorption giving the requested reverberation time
         final double absorption = 1 - Math.exp(-0.161 * volume / (surface * room.reverbTime));
         final double beta = Math.sqrt(1 - absorption);
+        // Reflection coefficient of each wall, same average absorption
+        final double[] areas = {depth * height, depth * height, width * height, width * height, width * depth, width * depth};
+        double weighted = 0;
+        for (int i = 0; i < 6; i++) {
+            weighted += areas[i] * WALL_ABSORPTION[i];
+        }
+        final double[] wallBeta = new double[6];
+        for (int i = 0; i < 6; i++) {
+            final double wallAbsorption = Math.min(0.95, absorption * WALL_ABSORPTION[i] * surface / weighted);
+            wallBeta[i] = Math.sqrt(1 - wallAbsorption);
+        }
         final double damping = Math.pow(WALL_DAMPING_48K, 48000.0 / fs);
 
-        // Listener in the middle of the room (left to right), facing the front wall (+y)
-        final double lx = width / 2;
+        // Listener near the middle of the room (left to right), facing the front wall (+y)
+        final double lx = width / 2 - room.listenerOffset;
         final double ly = depth - room.frontWallDistance - r0 * Math.cos(Math.toRadians(30));
         final double lz = EAR_HEIGHT;
         final double az = Math.toRadians(azimuthDegrees);
@@ -128,7 +146,10 @@ final class BrirGenerator {
                                 final int order = Math.abs(nx - u) + Math.abs(nx)
                                         + Math.abs(ny - v) + Math.abs(ny)
                                         + Math.abs(nz - w) + Math.abs(nz);
-                                double gain = r0 / distance * Math.pow(beta, order);
+                                double gain = r0 / distance
+                                        * Math.pow(wallBeta[0], Math.abs(nx - u)) * Math.pow(wallBeta[1], Math.abs(nx))
+                                        * Math.pow(wallBeta[2], Math.abs(ny - v)) * Math.pow(wallBeta[3], Math.abs(ny))
+                                        * Math.pow(wallBeta[4], Math.abs(nz - w)) * Math.pow(wallBeta[5], Math.abs(nz));
                                 if (order > 0) {
                                     // Directivity: angle between the (mirrored) speaker axis and the
                                     // direction from the image source to the listener
@@ -303,22 +324,114 @@ final class BrirGenerator {
         return best;
     }
 
+    /** Correction of the voice region applied to the speaker that carries the dialogue, 0..1. */
+    private static final double PRESENCE_CORRECTION = 0.7;
+    private static final int EQUALIZER_TAPS = 4096;
+
     /**
-     * Flattens the low end (below about 1 kHz) of the sum of two responses (a front speaker pair,
-     * or one speaker when {@code b < 0}), averaged over both ears, to the level of the middle
-     * frequencies: the virtual room colours the bass by several dB depending on its size. The same
-     * minimum phase correction is applied to all responses, so the differences between speakers
-     * (directional cues) are kept.
+     * Equalises the responses, in three steps:
+     * <ol>
+     *   <li>Low end of each speaker (below about 1 kHz, average of both ears) flattened to the
+     *       level of its middle frequencies: the room makes dips and peaks of several dB that
+     *       depend on the position (e.g. at 125 Hz, where the voices are).</li>
+     *   <li>Bass shelf (below 200 - 400 Hz) on the front pair only, bringing the bass of the
+     *       pair playing the same signal (sum, both ears) to the level of its middle frequencies,
+     *       as with headphones: the pair adds up in phase in the bass (+6 dB), only partly above.</li>
+     *   <li>Voice region (2 - 16 kHz) of the dialogue speaker (centre, or front pair) moved
+     *       {@link #PRESENCE_CORRECTION} of the way towards flat: the pinna of the dummy head
+     *       makes a broad dip at 5 - 10 kHz that sounds muffled with another head.</li>
+     * </ol>
+     * Step 3 applies the same correction to all speakers, so the differences between them
+     * (direction cues) are kept.
+     *
+     * @param pairA    front left speaker (or the only speaker)
+     * @param pairB    front right speaker, or -1
+     * @param dialogue centre speaker, or -1 to use the front pair
      */
-    static void equalizeLowEnd(float[][][] responses, int a, int b, int sampleRate) {
-        final int n = 65536;
+    static void equalize(float[][][] responses, int pairA, int pairB, int dialogue, int sampleRate) {
+        int maxLength = 0;
+        for (float[][] pair : responses) {
+            maxLength = Math.max(maxLength, pair[0].length);
+        }
+        int n = 32768;
+        while (n < maxLength + EQUALIZER_TAPS) {
+            n <<= 1;
+        }
         final Fft fft = new Fft(n);
+        final double binHz = (double) sampleRate / n;
+        final int bins = n / 2 + 1;
+
+        // 1. Bass of each speaker
+        for (int s = 0; s < responses.length; s++) {
+            final double[] power = smoothedPower(fft, responses, s, -1);
+            final double reference = bandAverage(power, binHz, 500, 2000);
+            final double[] gainDb = new double[bins];
+            for (int k = 0; k < bins; k++) {
+                final double f = Math.max(k * binHz, 20);
+                if (f < 1400) {
+                    final int bin = (int) Math.round(f / binHz);
+                    double g = clamp(10 * Math.log10(reference / Math.max(power[bin], 1e-20)), 6);
+                    if (f > 700) {
+                        g *= fade(f, 700, 1400);
+                    }
+                    gainDb[k] = g;
+                }
+            }
+            final float[] filter = minimumPhase(fft, gainDb);
+            for (int ear = 0; ear < 2; ear++) {
+                responses[s][ear] = convolveTruncated(fft, responses[s][ear], filter);
+            }
+        }
+
+        // 2. and 3., one filter for all speakers
+        final double[] pairPower = smoothedPower(fft, responses, pairA, pairB);
+        final double[] dialoguePower = dialogue >= 0 && dialogue != pairA
+                ? smoothedPower(fft, responses, dialogue, -1) : pairPower;
+        final double pairReference = bandAverage(pairPower, binHz, 500, 2000);
+        final double dialogueReference = bandAverage(dialoguePower, binHz, 500, 2000);
+        // Bass shelf: a pair playing the same bass adds up in phase (+6 dB) while the middle
+        // frequencies add up only partly
+        final double shelfDb = pairB >= 0
+                ? clamp(10 * Math.log10(pairReference / bandAverage(pairPower, binHz, 40, 200)), 6) : 0;
+        final double[] gainDb = new double[bins];
+        final double[] pairGainDb = new double[bins];
+        for (int k = 0; k < bins; k++) {
+            final double f = Math.max(k * binHz, 20);
+            final int bin = (int) Math.round(f / binHz);
+            double g = 0;
+            if (f > 1400 && f < 20000) {
+                double presence = PRESENCE_CORRECTION
+                        * clamp(10 * Math.log10(dialogueReference / Math.max(dialoguePower[bin], 1e-20)), 6);
+                if (f < 2000) {
+                    presence *= 1 - fade(f, 1400, 2000);
+                } else if (f > 16000) {
+                    presence *= fade(f, 16000, 20000);
+                }
+                g += presence;
+            }
+            gainDb[k] = g;
+            pairGainDb[k] = g + shelfDb * fade(f, 200, 400);
+        }
+        final float[] filter = minimumPhase(fft, gainDb);
+        final float[] pairFilter = minimumPhase(fft, pairGainDb);
+        for (int s = 0; s < responses.length; s++) {
+            final float[] h = s == pairA || s == pairB ? pairFilter : filter;
+            for (int ear = 0; ear < 2; ear++) {
+                responses[s][ear] = convolveTruncated(fft, responses[s][ear], h);
+            }
+        }
+    }
+
+    /** 1/3 octave smoothed power spectrum of responses a (+ b), averaged over both ears. */
+    private static double[] smoothedPower(Fft fft, float[][][] responses, int a, int b) {
+        final int n = fft.size();
         final double[] power = new double[n / 2 + 1];
+        final float[] re = new float[n];
+        final float[] im = new float[n];
         for (int ear = 0; ear < 2; ear++) {
-            final float[] re = new float[n];
-            final float[] im = new float[n];
-            final int length = Math.min(n, responses[a][ear].length);
-            for (int i = 0; i < length; i++) {
+            java.util.Arrays.fill(re, 0f);
+            java.util.Arrays.fill(im, 0f);
+            for (int i = 0; i < responses[a][ear].length; i++) {
                 re[i] = responses[a][ear][i] + (b >= 0 ? responses[b][ear][i] : 0f);
             }
             fft.forward(re, im);
@@ -326,52 +439,52 @@ final class BrirGenerator {
                 power[k] += 0.5 * (re[k] * re[k] + im[k] * im[k]);
             }
         }
-        final double binHz = (double) sampleRate / n;
-        // 1/3 octave smoothing, from 10 Hz to 2 kHz
-        final int maxBin = (int) (2000 / binHz);
-        final double[] smoothed = new double[maxBin + 1];
         final double[] prefix = new double[power.length + 1];
         for (int k = 0; k < power.length; k++) {
             prefix[k + 1] = prefix[k] + power[k];
         }
-        for (int k = 1; k <= maxBin; k++) {
+        final double[] smoothed = new double[power.length];
+        smoothed[0] = power[0];
+        for (int k = 1; k < power.length; k++) {
             final int lo = Math.max(1, (int) Math.floor(k * Math.pow(2, -1.0 / 6)));
             final int hi = Math.min(power.length - 1, (int) Math.ceil(k * Math.pow(2, 1.0 / 6)));
             smoothed[k] = (prefix[hi + 1] - prefix[lo]) / (hi - lo + 1);
         }
-        // Reference: average of 500 Hz - 2 kHz (equal weight per octave)
-        double reference = 0;
+        return smoothed;
+    }
+
+    /** Average of a power spectrum between two frequencies, equal weight per octave. */
+    private static double bandAverage(double[] power, double binHz, double from, double to) {
+        double sum = 0;
         double weights = 0;
-        for (int k = (int) (500 / binHz); k <= maxBin; k++) {
-            reference += smoothed[k] / k;
+        for (int k = (int) (from / binHz); k <= (int) (to / binHz); k++) {
+            sum += power[k] / k;
             weights += 1.0 / k;
         }
-        reference /= weights;
-        // Log magnitude of the correction: full below 700 Hz, none above 1.4 kHz, at most +-6 dB
+        return sum / weights;
+    }
+
+    private static double clamp(double db, double limit) {
+        return Math.max(-limit, Math.min(limit, db));
+    }
+
+    /** 1 at {@code from}, 0 at {@code to}, raised cosine on a logarithmic frequency axis. */
+    private static double fade(double f, double from, double to) {
+        final double x = Math.log(f / from) / Math.log(to / from);
+        return x <= 0 ? 1 : x >= 1 ? 0 : 0.5 + 0.5 * Math.cos(Math.PI * x);
+    }
+
+    /** Minimum phase filter ({@link #EQUALIZER_TAPS} taps) with the given gains (dB, bins 0..n/2). */
+    private static float[] minimumPhase(Fft fft, double[] gainDb) {
+        final int n = fft.size();
         final float[] logMagnitude = new float[n];
-        for (int k = 0; k <= n / 2; k++) {
-            final double f = Math.max(k * binHz, 20);
-            double gainDb = 0;
-            if (f < 1400) {
-                final int bin = Math.min(maxBin, Math.max(1, (int) Math.round(f / binHz)));
-                gainDb = 10 * Math.log10(reference / Math.max(smoothed[bin], 1e-20));
-                gainDb = Math.max(-6, Math.min(6, gainDb));
-                if (f > 700) {
-                    final double x = Math.log(f / 700) / Math.log(2);
-                    gainDb *= 0.5 + 0.5 * Math.cos(Math.PI * x);
-                }
-            }
-            logMagnitude[k] = (float) (gainDb / 20 * Math.log(10));
+        for (int k = 0; k < gainDb.length; k++) {
+            logMagnitude[k] = (float) (gainDb[k] / 20 * Math.log(10));
             if (k > 0 && k < n / 2) {
                 logMagnitude[n - k] = logMagnitude[k];
             }
         }
-        final float[] filter = minimumPhase(fft, logMagnitude, 8192);
-        for (float[][] pair : responses) {
-            for (int ear = 0; ear < 2; ear++) {
-                pair[ear] = convolveTruncated(fft, pair[ear], filter);
-            }
-        }
+        return minimumPhase(fft, logMagnitude, EQUALIZER_TAPS);
     }
 
     /** Minimum phase impulse response with the given log magnitude spectrum (real cepstrum method). */

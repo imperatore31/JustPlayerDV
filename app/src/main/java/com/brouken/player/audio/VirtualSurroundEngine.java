@@ -313,7 +313,11 @@ public final class VirtualSurroundEngine {
         }
         final float[][][] responses = BrirGenerator.generate(hrirs, preset, azimuths);
         final int[] reference = referenceSpeakers(azimuths);
-        BrirGenerator.equalizeLowEnd(responses, reference[0], reference[1], hrirs.sampleRate);
+        int centre = -1;
+        for (int i = 0; i < azimuths.length; i++) {
+            if (azimuths[i] == 0) centre = i;
+        }
+        BrirGenerator.equalize(responses, reference[0], reference[1], centre, hrirs.sampleRate);
         final double gain = normalisationGain(responses, azimuths, hrirs.sampleRate, false);
         for (float[][] pair : responses) {
             for (int ear = 0; ear < 2; ear++) {

@@ -18,5 +18,6 @@ pip download --no-deps slab && unzip slab-*.whl 'slab/data/*'
 python3 make_hrir_asset.py slab/data/mit_kemar_normal_pinna.bz2 ../../app/src/main/assets/hrir_kemar.bin
 ```
 
-Processing: diffuse-field equalisation, 1/6 octave smoothing, flat low end, minimum phase with
+Processing: diffuse-field equalisation, 1/6 octave smoothing, pinna notches limited to 5 dB below a
+2 octave envelope (they sound like a veil with another head), flat low end, minimum phase with
 the measured interaural delays, 48 kHz, 256 taps, int16. See `make_hrir_asset.py`.

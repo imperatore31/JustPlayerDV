@@ -1,7 +1,7 @@
 """Builds the HRIR asset of the virtual surround engine from the MIT KEMAR measurements.
 
-Steps: diffuse-field equalisation, 1/6 octave smoothing, flat low end (no ILD below ~200 Hz, as
-for a real head), minimum phase reconstruction with the measured interaural delay restored with
+Steps: diffuse-field equalisation, 1/6 octave smoothing, pinna notches limited to 5 dB below a
+2 octave envelope (above 2 kHz), flat low end (no ILD below ~200 Hz, as for a real head), minimum phase reconstruction with the measured interaural delay restored with
 sub-sample precision, resampling to 48 kHz (spectral), int16 quantisation. Only the left ear is
 stored: the measurements are symmetric (right ear at azimuth a == left ear at -a).
 
@@ -59,6 +59,19 @@ mag *= roll[None, :]
 t = np.clip((np.log(np.maximum(f_in, 1)) - np.log(200)) / (np.log(500) - np.log(200)), 0, 1)
 t = t * t * (3 - 2 * t)
 logmag = np.log(np.maximum(mag, 1e-4))
+# Limit the depth of the pinna notches above 2 kHz to NOTCH_LIMIT_DB below a 2 octave envelope:
+# they are the most individual part of an HRTF, and with a head that is not KEMAR's they mostly
+# sound like a veil over voices (the frontal notch spans 6-9 kHz, -14 dB). The head shadow of the
+# far ear (broad) is kept.
+NOTCH_LIMIT_DB = 5.0
+db = 20 / np.log(10) * logmag
+envelope = np.empty_like(db)
+for k, fk in enumerate(f_in):
+    sel = (f_in >= fk / 2) & (f_in <= fk * 2) if fk > 0 else (f_in == 0)
+    envelope[:, k] = db[:, sel].mean(axis=1)
+pinna = (f_in > 2000)[None, :]
+db = np.where(pinna, np.maximum(db, envelope - NOTCH_LIMIT_DB), db)
+logmag = np.log(10) / 20 * db
 logmag = logmag * t[None, :]
 # normalise: diffuse-field average gain of 0 dB in 500 Hz..8 kHz
 band = (f_in > 500) & (f_in < 8000)

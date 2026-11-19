@@ -7,11 +7,11 @@ package com.brouken.player.audio;
 public enum RoomPreset {
 
     /** Small treated control room: speakers close, short and quiet reverb. */
-    STUDIO("studio", 4.6, 5.6, 2.7, 0.22, 1.8, 1.0, 0.040, 1.0),
+    STUDIO("studio", 5.0, 5.6, 2.7, 0.22, 1.8, 1.0, 0.040, 1.0, 0.3),
     /** Home theatre / listening room: the default. */
-    LISTENING_ROOM("room", 5.8, 7.0, 2.9, 0.30, 2.3, 1.2, 0.060, 1.0),
-    /** Large hall with distant speakers. */
-    HALL("hall", 9.0, 12.0, 4.5, 0.55, 3.5, 1.8, 0.090, 1.0);
+    LISTENING_ROOM("room", 6.2, 7.0, 2.9, 0.30, 2.3, 1.2, 0.060, 1.0, 0.4),
+    /** Large hall: far walls (late, spacious reflections), speakers a bit farther. */
+    HALL("hall", 10.0, 13.0, 5.0, 0.45, 3.0, 2.0, 0.080, 1.0, 0.7);
 
     /** Value stored in the preferences. */
     public final String key;
@@ -29,9 +29,12 @@ public enum RoomPreset {
     final double mixingTime;
     /** Level of all reflections relative to the physical model (1 = physical). */
     final double reflectionGain;
+    /** Distance of the listener from the middle of the room, towards the left wall, metres. */
+    final double listenerOffset;
 
     RoomPreset(String key, double width, double length, double height, double reverbTime,
-               double speakerDistance, double frontWallDistance, double mixingTime, double reflectionGain) {
+               double speakerDistance, double frontWallDistance, double mixingTime, double reflectionGain,
+               double listenerOffset) {
         this.key = key;
         this.width = width;
         this.length = length;
@@ -41,6 +44,7 @@ public enum RoomPreset {
         this.frontWallDistance = frontWallDistance;
         this.mixingTime = mixingTime;
         this.reflectionGain = reflectionGain;
+        this.listenerOffset = listenerOffset;
     }
 
     public static RoomPreset fromKey(String key) {
