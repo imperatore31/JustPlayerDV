@@ -30,6 +30,12 @@ public final class VirtualSurroundEngine {
     private static final double LFE_GAIN = 1.41;
     private static final float DRY_MULTICHANNEL_GAIN = 0.7071f;
     private static final float MINUS_3_DB = 0.7071f;
+    /**
+     * Voice band boosted in stereo mixes by {@link #setDialogueBoost(float)}: shelf frequencies
+     * (half the boost), full boost from about 250 Hz to 4 kHz.
+     */
+    private static final double VOICE_LOW = 150;
+    private static final double VOICE_HIGH = 6500;
 
     private static final Map<String, float[][][]> CACHE = new LinkedHashMap<String, float[][][]>(8, 0.75f, true) {
         @Override
@@ -56,6 +62,16 @@ public final class VirtualSurroundEngine {
     private final float limiterRelease;
 
     private volatile boolean bypassRequested;
+    private volatile float dialogueGainTarget = 1f;
+    private float dialogueGain = 1f;
+    /** Speaker index of the centre channel (dialogue), or -1. */
+    private final int centreSpeaker;
+    private final float[] dialogueA;
+    private final float[] dialogueB;
+    /** Boost of the voice band of the middle of a stereo mix: gain, low shelf, high shelf. */
+    private Biquad voiceLowShelf;
+    private Biquad voiceHighShelf;
+    private float voiceBoostGain = 1f;
     private float wetGain = 1f;
     private boolean convolverStale;
     private float limiterEnvelope;
@@ -84,6 +100,11 @@ public final class VirtualSurroundEngine {
         final float[][][] responses = getResponses(hrirs, preset, azimuths, sampleRate);
         convolver = new PartitionedConvolver(responses, blockSize);
         convolverInput = new float[speakerChannels.length][];
+        centreSpeaker = channelCount >= 3 && azimuths.length > 2 && azimuths[2] == 0 ? 2 : -1;
+        dialogueA = new float[blockSize];
+        dialogueB = new float[blockSize];
+        voiceLowShelf = Biquad.lowShelf(VOICE_LOW, 0, sampleRate, null);
+        voiceHighShelf = Biquad.highShelf(VOICE_HIGH, 0, sampleRate, null);
         // LFE: relative to the level of the direct sound of one speaker
         lfeGain = (float) (LFE_GAIN / normalisationGain(responses, azimuths, sampleRate, true));
         lfeFilter = Biquad.lowPass(LFE_CUTOFF, sampleRate);
@@ -127,6 +148,17 @@ public final class VirtualSurroundEngine {
         return bypassRequested;
     }
 
+    /**
+     * Brings the dialogue forward (not in the plain downmix): the centre channel of multichannel
+     * audio, the voice band of the middle of a stereo mix (what both channels have in common).
+     * Can be called from any thread.
+     *
+     * @param decibels 0 for none
+     */
+    public void setDialogueBoost(float decibels) {
+        dialogueGainTarget = (float) Math.pow(10, decibels / 20);
+    }
+
     /** Starts the next block from the plain downmix and crossfades into virtual surround. */
     public void fadeIn() {
         wetGain = 0f;
@@ -136,6 +168,9 @@ public final class VirtualSurroundEngine {
     public void reset() {
         convolver.reset();
         lfeFilter.reset();
+        voiceLowShelf.reset();
+        voiceHighShelf.reset();
+        dialogueGain = dialogueGainTarget;
         convolverStale = false;
         limiterEnvelope = 0;
         wetGain = bypassRequested ? 0f : 1f;
@@ -164,6 +199,7 @@ public final class VirtualSurroundEngine {
             for (int i = 0; i < speakerChannels.length; i++) {
                 convolverInput[i] = in[speakerChannels[i]];
             }
+            boostDialogue(in);
             convolver.process(convolverInput, wetL, wetR);
             if (lfeChannel >= 0) {
                 final float[] lfe = in[lfeChannel];
@@ -200,6 +236,45 @@ public final class VirtualSurroundEngine {
             wetGain = wetTarget;
         }
         limit(outL, outR);
+    }
+
+    /** Applies the dialogue boost to the convolver input (copies, the input is not modified). */
+    private void boostDialogue(float[][] in) {
+        final int n = blockSize;
+        final float start = dialogueGain;
+        final float end = dialogueGainTarget;
+        dialogueGain = end;
+        if (centreSpeaker >= 0) {
+            if (start == 1f && end == 1f) {
+                return;
+            }
+            final float[] centre = in[speakerChannels[centreSpeaker]];
+            for (int i = 0; i < n; i++) {
+                dialogueA[i] = centre[i] * (start + (end - start) * (i + 1) / n);
+            }
+            convolverInput[centreSpeaker] = dialogueA;
+        } else if (channelCount == 2) {
+            // Voice band filter on the middle (L + R) / 2, the difference added to both channels:
+            // a centred voice gets exactly the boost, a sound in one channel only about half of
+            // it. The filters always run, so that switching the boost on does not click.
+            if (end != voiceBoostGain) {
+                final double db = 20 * Math.log10(end);
+                voiceLowShelf = Biquad.lowShelf(VOICE_LOW, -db, sampleRate, voiceLowShelf);
+                voiceHighShelf = Biquad.highShelf(VOICE_HIGH, -db, sampleRate, voiceHighShelf);
+                voiceBoostGain = end;
+            }
+            final float gain = voiceBoostGain;
+            final float[] left = in[0];
+            final float[] right = in[1];
+            for (int i = 0; i < n; i++) {
+                final float middle = 0.5f * (left[i] + right[i]);
+                final float extra = gain * voiceHighShelf.process(voiceLowShelf.process(middle)) - middle;
+                dialogueA[i] = left[i] + extra;
+                dialogueB[i] = right[i] + extra;
+            }
+            convolverInput[0] = dialogueA;
+            convolverInput[1] = dialogueB;
+        }
     }
 
     /**
@@ -401,6 +476,55 @@ public final class VirtualSurroundEngine {
             this.b2 = (float) (b2 / a0);
             this.a1 = (float) (a1 / a0);
             this.a2 = (float) (a2 / a0);
+        }
+
+        /** Low shelf (RBJ, slope 1): {@code gainDb} below {@code frequency}. */
+        static Biquad lowShelf(double frequency, double gainDb, double sampleRate, Biquad state) {
+            final double a = Math.pow(10, gainDb / 40);
+            final double w = 2 * Math.PI * frequency / sampleRate;
+            final double cos = Math.cos(w);
+            final double beta = 2 * Math.sqrt(a) * Math.sin(w) / Math.sqrt(2);
+            return withState(new Biquad(
+                    a * ((a + 1) - (a - 1) * cos + beta),
+                    2 * a * ((a - 1) - (a + 1) * cos),
+                    a * ((a + 1) - (a - 1) * cos - beta),
+                    (a + 1) + (a - 1) * cos + beta,
+                    -2 * ((a - 1) + (a + 1) * cos),
+                    (a + 1) + (a - 1) * cos - beta), state);
+        }
+
+        /** High shelf (RBJ, slope 1): {@code gainDb} above {@code frequency}. */
+        static Biquad highShelf(double frequency, double gainDb, double sampleRate, Biquad state) {
+            final double a = Math.pow(10, gainDb / 40);
+            final double w = 2 * Math.PI * frequency / sampleRate;
+            final double cos = Math.cos(w);
+            final double beta = 2 * Math.sqrt(a) * Math.sin(w) / Math.sqrt(2);
+            return withState(new Biquad(
+                    a * ((a + 1) + (a - 1) * cos + beta),
+                    -2 * a * ((a - 1) + (a + 1) * cos),
+                    a * ((a + 1) + (a - 1) * cos - beta),
+                    (a + 1) - (a - 1) * cos + beta,
+                    2 * ((a - 1) - (a + 1) * cos),
+                    (a + 1) - (a - 1) * cos - beta), state);
+        }
+
+        /** Takes over the state of {@code previous} (a gain change without a click). */
+        private static Biquad withState(Biquad filter, Biquad previous) {
+            if (previous != null) {
+                filter.x1 = previous.x1;
+                filter.x2 = previous.x2;
+                filter.y1 = previous.y1;
+                filter.y2 = previous.y2;
+            }
+            return filter;
+        }
+
+        /** Butterworth high-pass. */
+        static Biquad highPass(double cutoff, double sampleRate) {
+            final double w = 2 * Math.PI * cutoff / sampleRate;
+            final double alpha = Math.sin(w) / (2 * Math.sqrt(0.5));
+            final double cos = Math.cos(w);
+            return new Biquad((1 + cos) / 2, -(1 + cos), (1 + cos) / 2, 1 + alpha, -2 * cos, 1 - alpha);
         }
 
         /** Butterworth low-pass. */

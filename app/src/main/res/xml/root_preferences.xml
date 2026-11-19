@@ -63,6 +63,15 @@
             app:title="@string/pref_virtual_surround_room"
             app:useSimpleSummaryProvider="true" />
 
+        <ListPreference
+            app:defaultValue="3"
+            app:dependency="virtualSurround"
+            app:entries="@array/virtual_surround_dialogue_entries"
+            app:entryValues="@array/virtual_surround_dialogue_values"
+            app:key="virtualSurroundDialogue"
+            app:title="@string/pref_virtual_surround_dialogue"
+            app:useSimpleSummaryProvider="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/pref_subtitle_header">

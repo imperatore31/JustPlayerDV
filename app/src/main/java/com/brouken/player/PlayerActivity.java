@@ -1296,6 +1296,7 @@ public class PlayerActivity extends Activity {
                 : null;
         if (virtualSurround != null) {
             virtualSurround.setUserBypassed(virtualSurroundBypassed);
+            virtualSurround.setDialogueBoost(mPrefs.virtualSurroundDialogue);
             // Prefer the multichannel tracks even without a spatializer: they are rendered here
             trackSelector.setParameters(trackSelector.buildUponParameters()
                     .setConstrainAudioChannelCountToDeviceCapabilities(false));

@@ -48,6 +48,13 @@ final class BrirGenerator {
      * add up to a boomy, uneven low end).
      */
     private static final double BASS_CROSSOVER = 150;
+    /**
+     * Energy of the late reverb of the centre speaker relative to the others (-4.6 dB): a more
+     * directional speaker, as for dialogue in cinemas. The late reverb of the whole scene
+     * otherwise masks the voices; the early reflections stay (they make the voice fuller and help
+     * to hear it outside the head).
+     */
+    private static final double CENTRE_REVERB_ENERGY = 0.35;
     /** Mean square directivity of the speaker model over all directions (diffuse field). */
     private static final double MEAN_SQUARE_DIRECTIVITY = 0.49 + 0.09 / 3;
 
@@ -208,6 +215,9 @@ final class BrirGenerator {
                 * Math.exp(2 * Math.log(beta) * (mixing - TAIL_FADE + r0 / c) / meanFreePathTime);
         if (calibrationEnergy > 0 && modelEnergy > 0) {
             energyScale *= calibrationEnergy / modelEnergy;
+        }
+        if (azimuthDegrees == 0) {
+            energyScale *= CENTRE_REVERB_ENERGY;
         }
         final double tailStart = mixing - TAIL_FADE;
         final double tailEnd = (double) (length - taps) / fs;

@@ -56,6 +56,7 @@ class Prefs {
     private static final String PREF_KEY_SUBTITLE_STYLE_BOLD = "subtitleStyleBold";
     private static final String PREF_KEY_VIRTUAL_SURROUND = "virtualSurround";
     private static final String PREF_KEY_VIRTUAL_SURROUND_ROOM = "virtualSurroundRoom";
+    private static final String PREF_KEY_VIRTUAL_SURROUND_DIALOGUE = "virtualSurroundDialogue";
 
     public static final String TRACK_DEFAULT = "default";
     public static final String TRACK_DEVICE = "device";
@@ -96,6 +97,8 @@ class Prefs {
     public boolean subtitleStyleBold = false;
     public boolean virtualSurround = false;
     public String virtualSurroundRoom = RoomPreset.LISTENING_ROOM.key;
+    /** Dialogue boost of the virtual surround, dB. */
+    public int virtualSurroundDialogue = 3;
 
     private LinkedHashMap positions;
 
@@ -172,6 +175,12 @@ class Prefs {
         subtitleStyleBold = mSharedPreferences.getBoolean(PREF_KEY_SUBTITLE_STYLE_BOLD, subtitleStyleBold);
         virtualSurround = mSharedPreferences.getBoolean(PREF_KEY_VIRTUAL_SURROUND, virtualSurround);
         virtualSurroundRoom = mSharedPreferences.getString(PREF_KEY_VIRTUAL_SURROUND_ROOM, virtualSurroundRoom);
+        try {
+            virtualSurroundDialogue = Integer.parseInt(mSharedPreferences.getString(PREF_KEY_VIRTUAL_SURROUND_DIALOGUE,
+                    String.valueOf(virtualSurroundDialogue)));
+        } catch (NumberFormatException e) {
+            virtualSurroundDialogue = 3;
+        }
     }
 
     /** Room chosen from the player (long press on the virtual surround button). */

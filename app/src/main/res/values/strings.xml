@@ -102,4 +102,8 @@
     <string name="virtual_surround_off">Virtual surround off (original sound)</string>
     <string name="virtual_surround_no_headphones">Virtual surround: connect headphones</string>
     <string name="virtual_surround_room_changed">Room: %1$s</string>
+    <string name="pref_virtual_surround_dialogue">Dialogue</string>
+    <string name="virtual_surround_dialogue_normal">Normal</string>
+    <string name="virtual_surround_dialogue_clearer">Forward (+3 dB)</string>
+    <string name="virtual_surround_dialogue_much_clearer">Well forward (+6 dB)</string>
 </resources>

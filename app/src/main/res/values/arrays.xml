@@ -38,4 +38,17 @@
     <item>room</item>
     <item>hall</item>
   </string-array>
+
+  <string-array name="virtual_surround_dialogue_entries">
+    <item>@string/virtual_surround_dialogue_normal</item>
+    <item>@string/virtual_surround_dialogue_clearer</item>
+    <item>@string/virtual_surround_dialogue_much_clearer</item>
+  </string-array>
+
+  <!-- Dialogue boost, dB -->
+  <string-array name="virtual_surround_dialogue_values">
+    <item>0</item>
+    <item>3</item>
+    <item>6</item>
+  </string-array>
 </resources>

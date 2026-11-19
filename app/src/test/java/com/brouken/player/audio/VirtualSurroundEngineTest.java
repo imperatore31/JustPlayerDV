@@ -204,6 +204,33 @@ public class VirtualSurroundEngineTest {
     }
 
     @Test
+    public void dialogueBoostRaisesTheCentre() {
+        // 5.1: centre channel only
+        final float[][] centre = new float[6][];
+        final float[][] noise = bandNoise(1, false, 48000, 0.05f);
+        for (int c = 0; c < 6; c++) {
+            centre[c] = c == 2 ? noise[0] : new float[48000];
+        }
+        assertEquals(2.0, boostRatio(6, centre, 6), 0.1);
+        // Stereo: the same signal in both channels (centred voice)
+        final float[][] stereo = {noise[0].clone(), noise[0].clone()};
+        assertEquals(2.0, boostRatio(2, stereo, 6), 0.3);
+        // Stereo: a side signal (left only) gets much less
+        final float[][] side = {noise[0].clone(), new float[48000]};
+        assertTrue(boostRatio(2, side, 6) < 1.5);
+    }
+
+    /** Output level with a dialogue boost relative to without (rms, after the first block). */
+    private static double boostRatio(int channels, float[][] in, float decibels) {
+        final VirtualSurroundEngine plain = new VirtualSurroundEngine(hrirs, RoomPreset.LISTENING_ROOM, channels, 48000);
+        final VirtualSurroundEngine boosted = new VirtualSurroundEngine(hrirs, RoomPreset.LISTENING_ROOM, channels, 48000);
+        boosted.setDialogueBoost(decibels);
+        boosted.reset();
+        final int skip = plain.getBlockSize();
+        return rms(run(boosted, in)[0], skip) / rms(run(plain, in)[0], skip);
+    }
+
+    @Test
     public void loudInputIsLimited() {
         final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, RoomPreset.HALL, 6, 48000);
         final float[][] in = new float[6][48000];

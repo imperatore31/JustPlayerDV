@@ -35,6 +35,7 @@ Sui dispositivi **senza Dolby Vision ma con HDR10+** (per esempio Samsung e Goog
 Con qualsiasi cuffia o auricolare (a filo, USB-C o Bluetooth) DV Player può far sentire l'audio come se arrivasse da **casse vere in una stanza**: i dialoghi dallo schermo davanti a te, i surround ai lati e dietro. Funziona con lo stereo e con il 5.1/7.1 decodificato dal player (AC3, E-AC3, DTS, TrueHD…). Ogni canale suona da una cassa virtuale in una stanza simulata: riflessioni e riverbero sono calcolati e filtrati con le risposte della testa artificiale MIT KEMAR; i bassi restano asciutti. Ci sono tre ambienti: *Studio*, *Sala d'ascolto* e *Sala grande*.
 - Si attiva in **Audio olografico per cuffie**, nella sezione *Audio olografico (cuffie)* delle impostazioni.
 - Nel player compare l'icona del surround: **toccala** per confrontare con l'audio originale, **tienila premuta** per cambiare ambiente.
+- **Dialoghi**: *In primo piano* (+3 dB, predefinito) o *Molto in primo piano* (+6 dB) alza il canale centrale del 5.1/7.1 e, nello stereo, la voce al centro del mix.
 - Disattiva l'audio spaziale del telefono e delle cuffie (e l'SXFI integrato, se gli auricolari lo hanno), altrimenti l'effetto viene applicato due volte.
 - Senza cuffie l'audio torna normale; con uscita HDMI verso TV o amplificatore l'effetto non interviene.
 
@@ -90,6 +91,7 @@ On devices **without Dolby Vision but with HDR10+** (e.g. Samsung and Google Pix
 With any headphones or earphones (wired, USB-C or Bluetooth) DV Player can make the audio sound as if it came from **real speakers in a room**: the dialogue from the screen in front of you, the surrounds at the sides and behind. It works with stereo and with 5.1/7.1 decoded by the player (AC3, E-AC3, DTS, TrueHD…). Every channel plays from a virtual speaker in a simulated room: reflections and reverb are computed and filtered with the head-related responses of the MIT KEMAR dummy head; the bass stays dry. There are three rooms: *Studio*, *Listening room* and *Large hall*.
 - Enable **Virtual surround for headphones** in the *Headphone virtual surround* section of the settings.
 - A surround icon appears in the player: **tap** it to compare with the original sound, **long press** it to change the room.
+- **Dialogue**: *Forward* (+3 dB, default) or *Well forward* (+6 dB) raises the centre channel of 5.1/7.1 and, in stereo, the voice in the middle of the mix.
 - Turn off the spatial audio of the phone and of the headphones (and built-in SXFI, if your earphones have it), otherwise the effect is applied twice.
 - Without headphones the audio is the normal one; with HDMI output to a TV or receiver the effect stays off.
 

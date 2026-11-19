@@ -46,6 +46,7 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
     private volatile boolean userBypassed;
     private volatile boolean headphonesConnected;
     private volatile boolean processing;
+    private volatile float dialogueBoost;
 
     // Playback thread
     private int channelCount = -1;
@@ -95,6 +96,11 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
 
     public boolean isUserBypassed() {
         return userBypassed;
+    }
+
+    /** Brings the dialogue forward by this many dB (see {@link VirtualSurroundEngine#setDialogueBoost}). */
+    public void setDialogueBoost(float decibels) {
+        dialogueBoost = decibels;
     }
 
     /** Without headphones the output is the plain stereo mix. */
@@ -163,6 +169,7 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
         swapFrom = null;
         if (engine != null) {
             engine.setBypassed(isBypassed());
+            engine.setDialogueBoost(dialogueBoost);
             engine.reset();
         }
         maybeBuildEngine();
@@ -304,10 +311,12 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
             return;
         }
         engine.setBypassed(bypassed);
+        engine.setDialogueBoost(dialogueBoost);
         engine.process(block, left, right);
         if (swapping) {
             if (swapFrom != null) {
                 swapFrom.setBypassed(bypassed);
+                swapFrom.setDialogueBoost(dialogueBoost);
                 swapFrom.process(block, oldLeft, oldRight);
             } else {
                 VirtualSurroundEngine.downmix(channelCount, block, blockSize, oldLeft, oldRight);
@@ -343,6 +352,7 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
             return;
         }
         built.setBypassed(isBypassed());
+        built.setDialogueBoost(dialogueBoost);
         built.reset();
         swapFrom = engine;
         engine = built;
