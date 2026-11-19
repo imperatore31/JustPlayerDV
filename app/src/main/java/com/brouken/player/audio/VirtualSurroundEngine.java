@@ -46,7 +46,7 @@ public final class VirtualSurroundEngine {
 
     private final int channelCount;
     private final int sampleRate;
-    private final RoomPreset preset;
+    private final RoomParams room;
     private final int blockSize;
     /** Input channel of each virtual speaker. */
     private final int[] speakerChannels;
@@ -84,20 +84,30 @@ public final class VirtualSurroundEngine {
      * Builds the engine. Slow the first time for a combination of room, layout and sample rate
      * (the room responses are synthesised, around 0.1 - 0.5 s), fast afterwards (cached).
      */
-    public VirtualSurroundEngine(HrirSet hrirs, RoomPreset preset, int channelCount, int sampleRate) {
+    public VirtualSurroundEngine(HrirSet hrirs, RoomParams room, int channelCount, int sampleRate) {
         if (!supportsChannelCount(channelCount)) {
             throw new IllegalArgumentException("Unsupported channel count " + channelCount);
         }
         this.channelCount = channelCount;
         this.sampleRate = sampleRate;
-        this.preset = preset;
+        this.room = room;
         this.blockSize = blockSizeFor(sampleRate);
 
         final double[] azimuths = speakerAzimuths(channelCount);
+        final double[] elevations = new double[azimuths.length];
+        for (int i = 0; i < azimuths.length; i++) {
+            if (Math.abs(azimuths[i]) == 30) {
+                azimuths[i] = Math.signum(azimuths[i]) * room.frontWidth;
+            }
+            if (Math.abs(azimuths[i]) <= 45) {
+                // Front speakers (left, centre, right) at the height of the screen
+                elevations[i] = room.screenHeight;
+            }
+        }
         lfeChannel = lfeChannel(channelCount);
         speakerChannels = SPEAKER_CHANNELS[channelCount];
 
-        final float[][][] responses = getResponses(hrirs, preset, azimuths, sampleRate);
+        final float[][][] responses = getResponses(hrirs, room, azimuths, elevations, sampleRate);
         convolver = new PartitionedConvolver(responses, blockSize);
         convolverInput = new float[speakerChannels.length][];
         centreSpeaker = channelCount >= 3 && azimuths.length > 2 && azimuths[2] == 0 ? 2 : -1;
@@ -106,7 +116,7 @@ public final class VirtualSurroundEngine {
         voiceLowShelf = Biquad.lowShelf(VOICE_LOW, 0, sampleRate, null);
         voiceHighShelf = Biquad.highShelf(VOICE_HIGH, 0, sampleRate, null);
         // LFE: relative to the level of the direct sound of one speaker
-        lfeGain = (float) (LFE_GAIN / normalisationGain(responses, azimuths, sampleRate, true));
+        lfeGain = (float) (LFE_GAIN / normalisationGain(responses, sampleRate, true));
         lfeFilter = Biquad.lowPass(LFE_CUTOFF, sampleRate);
         wetL = new float[blockSize];
         wetR = new float[blockSize];
@@ -132,8 +142,8 @@ public final class VirtualSurroundEngine {
         return sampleRate;
     }
 
-    public RoomPreset getPreset() {
-        return preset;
+    public RoomParams getRoom() {
+        return room;
     }
 
     /**
@@ -375,10 +385,11 @@ public final class VirtualSurroundEngine {
 
     // ---- Room responses
 
-    private static float[][][] getResponses(HrirSet hrirs, RoomPreset preset, double[] azimuths, int sampleRate) {
-        final StringBuilder key = new StringBuilder(preset.key).append('/').append(sampleRate);
-        for (double azimuth : azimuths) {
-            key.append('/').append(azimuth);
+    private static float[][][] getResponses(HrirSet hrirs, RoomParams room, double[] azimuths,
+                                            double[] elevations, int sampleRate) {
+        final StringBuilder key = new StringBuilder(room.key()).append('/').append(sampleRate);
+        for (int i = 0; i < azimuths.length; i++) {
+            key.append('/').append(azimuths[i]).append(',').append(elevations[i]);
         }
         synchronized (CACHE) {
             final float[][][] cached = CACHE.get(key.toString());
@@ -386,14 +397,14 @@ public final class VirtualSurroundEngine {
                 return cached;
             }
         }
-        final float[][][] responses = BrirGenerator.generate(hrirs, preset, azimuths);
-        final int[] reference = referenceSpeakers(azimuths);
+        final float[][][] responses = BrirGenerator.generate(hrirs, room, azimuths, elevations);
         int centre = -1;
         for (int i = 0; i < azimuths.length; i++) {
             if (azimuths[i] == 0) centre = i;
         }
-        BrirGenerator.equalize(responses, reference[0], reference[1], centre, hrirs.sampleRate);
-        final double gain = normalisationGain(responses, azimuths, hrirs.sampleRate, false);
+        BrirGenerator.equalize(responses, 0, responses.length > 1 ? 1 : -1, centre, hrirs.sampleRate,
+                room.brightnessDb);
+        final double gain = normalisationGain(responses, hrirs.sampleRate, false);
         for (float[][] pair : responses) {
             for (int ear = 0; ear < 2; ear++) {
                 float[] response = pair[ear];
@@ -415,10 +426,10 @@ public final class VirtualSurroundEngine {
      *
      * @param directOnly only the direct sound of one front speaker (reference for the LFE)
      */
-    private static double normalisationGain(float[][][] responses, double[] azimuths, int sampleRate, boolean directOnly) {
-        final int[] reference = referenceSpeakers(azimuths);
-        final int a = reference[0];
-        int b = reference[1];
+    private static double normalisationGain(float[][][] responses, int sampleRate, boolean directOnly) {
+        // The front pair is always first (layouts with 2 channels or more)
+        final int a = 0;
+        int b = responses.length > 1 ? 1 : -1;
         int length = responses[a][0].length;
         if (directOnly) {
             // First 2.5 ms: the direct sound
@@ -452,17 +463,6 @@ public final class VirtualSurroundEngine {
             }
         }
         return energy > 0 ? Math.sqrt(weights / energy) : 1;
-    }
-
-    /** The front speaker pair (left, right), or the only speaker and -1. */
-    private static int[] referenceSpeakers(double[] azimuths) {
-        int a = -1;
-        int b = -1;
-        for (int i = 0; i < azimuths.length; i++) {
-            if (azimuths[i] == 30) a = i;
-            if (azimuths[i] == -30) b = i;
-        }
-        return a >= 0 && b >= 0 ? new int[]{a, b} : new int[]{0, -1};
     }
 
     /** Second order IIR filter (direct form I). */

@@ -102,6 +102,7 @@ import androidx.media3.ui.SubtitleView;
 import androidx.media3.ui.TimeBar;
 
 import com.brouken.player.audio.AudioRoutes;
+import com.brouken.player.audio.RoomParams;
 import com.brouken.player.audio.RoomPreset;
 import com.brouken.player.audio.VirtualSurroundAudioProcessor;
 import com.brouken.player.dovi.DoviConvertingExtractorsFactory;
@@ -480,19 +481,9 @@ public class PlayerActivity extends Activity {
             resetHideCallbacks();
         });
         buttonVirtualSurround.setOnLongClickListener(view -> {
-            if (virtualSurround == null) {
-                return true;
+            if (virtualSurround != null) {
+                showVirtualSurroundTuning();
             }
-            final RoomPreset room = virtualSurround.getPreset().next();
-            virtualSurround.setPreset(room);
-            mPrefs.updateVirtualSurroundRoom(room.key);
-            if (virtualSurroundBypassed) {
-                virtualSurroundBypassed = false;
-                virtualSurround.setUserBypassed(false);
-                updateButtonVirtualSurround();
-            }
-            Utils.showText(playerView, getString(R.string.virtual_surround_room_changed, getRoomName(room)));
-            resetHideCallbacks();
             return true;
         });
 
@@ -1292,7 +1283,7 @@ public class PlayerActivity extends Activity {
         // Headphone virtual surround: an audio processor in the audio sink
         unregisterAudioDeviceCallback();
         virtualSurround = mPrefs.virtualSurround
-                ? new VirtualSurroundAudioProcessor(this, RoomPreset.fromKey(mPrefs.virtualSurroundRoom))
+                ? new VirtualSurroundAudioProcessor(this, mPrefs.getVirtualSurroundRoomParams())
                 : null;
         if (virtualSurround != null) {
             virtualSurround.setUserBypassed(virtualSurroundBypassed);
@@ -1566,7 +1557,7 @@ public class PlayerActivity extends Activity {
         } else if (!virtualSurround.isHeadphonesConnected()) {
             text = getString(R.string.virtual_surround_no_headphones);
         } else {
-            text = getString(R.string.virtual_surround_on, getRoomName(virtualSurround.getPreset()));
+            text = getString(R.string.virtual_surround_on, getRoomName(RoomPreset.fromKey(mPrefs.virtualSurroundRoom)));
         }
         Utils.showText(playerView, text);
     }
@@ -1577,10 +1568,47 @@ public class PlayerActivity extends Activity {
                 return getString(R.string.virtual_surround_room_studio);
             case HALL:
                 return getString(R.string.virtual_surround_room_hall);
+            case CUSTOM:
+                return getString(R.string.virtual_surround_room_custom);
             case LISTENING_ROOM:
             default:
                 return getString(R.string.virtual_surround_room_room);
         }
+    }
+
+    /** Live tuning of the virtual surround (long press on its button). */
+    private void showVirtualSurroundTuning() {
+        playerView.setControllerShowTimeoutMs(-1);
+        VirtualSurroundTuning.show(this, mPrefs, !virtualSurroundBypassed,
+                new VirtualSurroundTuning.Listener() {
+                    @Override
+                    public void onRoomChanged(RoomParams room) {
+                        if (virtualSurround != null) {
+                            virtualSurround.setRoom(room);
+                        }
+                    }
+
+                    @Override
+                    public void onDialogueChanged(int decibels) {
+                        if (virtualSurround != null) {
+                            virtualSurround.setDialogueBoost(decibels);
+                        }
+                    }
+
+                    @Override
+                    public void onEffectToggled(boolean on) {
+                        virtualSurroundBypassed = !on;
+                        if (virtualSurround != null) {
+                            virtualSurround.setUserBypassed(virtualSurroundBypassed);
+                        }
+                        updateButtonVirtualSurround();
+                    }
+
+                    @Override
+                    public void onClosed() {
+                        resetHideCallbacks();
+                    }
+                });
     }
 
     /**

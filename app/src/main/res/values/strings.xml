@@ -92,7 +92,7 @@
     <string name="pref_hdr_badge_summary">When a video starts, show its format for a few seconds in the top left corner: Dolby Vision, HDR10+ original or converted, HDR10, HLG</string>
     <string name="pref_audio_header">Headphone virtual surround</string>
     <string name="pref_virtual_surround">Virtual surround for headphones</string>
-    <string name="pref_virtual_surround_summary">Plays the audio through virtual speakers in a virtual room, in front of and around you, with the dialogue coming from the screen: stereo, 5.1 and 7.1. Works with any wired, USB or Bluetooth headphones; turn off the spatial audio of the phone and of the headphones. In the player, tap the button to compare with the original sound, long-press it to change the room.</string>
+    <string name="pref_virtual_surround_summary">Plays the audio through virtual speakers in a virtual room, in front of and around you, with the dialogue coming from the screen: stereo, 5.1 and 7.1. Works with any wired, USB or Bluetooth headphones; turn off the spatial audio of the phone and of the headphones. In the player, tap the button to compare with the original sound, long-press it to tune the room by ear.</string>
     <string name="pref_virtual_surround_room">Room</string>
     <string name="virtual_surround_room_studio">Studio (small, dry)</string>
     <string name="virtual_surround_room_room">Listening room</string>
@@ -101,9 +101,22 @@
     <string name="virtual_surround_on">Virtual surround: %1$s</string>
     <string name="virtual_surround_off">Virtual surround off (original sound)</string>
     <string name="virtual_surround_no_headphones">Virtual surround: connect headphones</string>
-    <string name="virtual_surround_room_changed">Room: %1$s</string>
     <string name="pref_virtual_surround_dialogue">Dialogue</string>
     <string name="virtual_surround_dialogue_normal">Normal</string>
     <string name="virtual_surround_dialogue_clearer">Forward (+3 dB)</string>
     <string name="virtual_surround_dialogue_much_clearer">Well forward (+6 dB)</string>
+    <string name="virtual_surround_room_custom">Custom (tuned in the player)</string>
+    <string name="virtual_surround_tuning_title">Tune virtual surround</string>
+    <string name="virtual_surround_tuning_hint">Changes are heard in a moment. To match a reference (e.g. headphones with their own virtual surround), switch the effect off here and theirs on, and back.</string>
+    <string name="virtual_surround_tuning_effect">Virtual surround on</string>
+    <string name="virtual_surround_tuning_room">Room</string>
+    <string name="virtual_surround_tuning_distance">Speaker distance: %1$.1f m</string>
+    <string name="virtual_surround_tuning_size">Room size: %1$s</string>
+    <string name="virtual_surround_tuning_reverb">Reverb time: %1$.2f s</string>
+    <string name="virtual_surround_tuning_level">Amount of room: %1$+.1f dB</string>
+    <string name="virtual_surround_tuning_width">Front width: ±%1$.0f°</string>
+    <string name="virtual_surround_tuning_brightness">Brightness: %1$+.1f dB</string>
+    <string name="virtual_surround_tuning_height">Screen height: %1$.0f°</string>
+    <string name="virtual_surround_tuning_dialogue">Dialogue: +%1$d dB</string>
+    <string name="virtual_surround_tuning_close">Close</string>
 </resources>

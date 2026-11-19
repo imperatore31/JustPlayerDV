@@ -91,7 +91,7 @@
     <string name="pref_hdr_badge_summary">All\'avvio di un video mostra per qualche secondo in alto a sinistra il suo formato: Dolby Vision, HDR10+ originale o convertito, HDR10, HLG</string>
     <string name="pref_audio_header">Audio olografico (cuffie)</string>
     <string name="pref_virtual_surround">Audio olografico per cuffie</string>
-    <string name="pref_virtual_surround_summary">Riproduce l\'audio con casse virtuali in una stanza virtuale, davanti e intorno a te, con i dialoghi che arrivano dallo schermo: stereo, 5.1 e 7.1. Funziona con qualsiasi cuffia a filo, USB o Bluetooth; disattiva l\'audio spaziale del telefono e delle cuffie. Nel player tocca il pulsante per confrontare con l\'audio originale, tienilo premuto per cambiare ambiente.</string>
+    <string name="pref_virtual_surround_summary">Riproduce l\'audio con casse virtuali in una stanza virtuale, davanti e intorno a te, con i dialoghi che arrivano dallo schermo: stereo, 5.1 e 7.1. Funziona con qualsiasi cuffia a filo, USB o Bluetooth; disattiva l\'audio spaziale del telefono e delle cuffie. Nel player tocca il pulsante per confrontare con l\'audio originale, tienilo premuto per regolare l\'ambiente a orecchio.</string>
     <string name="pref_virtual_surround_room">Ambiente</string>
     <string name="virtual_surround_room_studio">Studio (piccolo, secco)</string>
     <string name="virtual_surround_room_room">Sala d\'ascolto</string>
@@ -100,9 +100,22 @@
     <string name="virtual_surround_on">Audio olografico: %1$s</string>
     <string name="virtual_surround_off">Audio olografico disattivato (audio originale)</string>
     <string name="virtual_surround_no_headphones">Audio olografico: collega le cuffie</string>
-    <string name="virtual_surround_room_changed">Ambiente: %1$s</string>
     <string name="pref_virtual_surround_dialogue">Dialoghi</string>
     <string name="virtual_surround_dialogue_normal">Normali</string>
     <string name="virtual_surround_dialogue_clearer">In primo piano (+3 dB)</string>
     <string name="virtual_surround_dialogue_much_clearer">Molto in primo piano (+6 dB)</string>
+    <string name="virtual_surround_room_custom">Personalizzata (regolata nel player)</string>
+    <string name="virtual_surround_tuning_title">Regola l\'audio olografico</string>
+    <string name="virtual_surround_tuning_hint">Le modifiche si sentono dopo un istante. Per confrontare con un riferimento (per esempio cuffie con il loro audio spaziale), spegni qui l\'effetto e accendi il loro, e viceversa.</string>
+    <string name="virtual_surround_tuning_effect">Audio olografico attivo</string>
+    <string name="virtual_surround_tuning_room">Ambiente</string>
+    <string name="virtual_surround_tuning_distance">Distanza delle casse: %1$.1f m</string>
+    <string name="virtual_surround_tuning_size">Dimensione della stanza: %1$s</string>
+    <string name="virtual_surround_tuning_reverb">Durata del riverbero: %1$.2f s</string>
+    <string name="virtual_surround_tuning_level">Quantità di stanza: %1$+.1f dB</string>
+    <string name="virtual_surround_tuning_width">Larghezza frontale: ±%1$.0f°</string>
+    <string name="virtual_surround_tuning_brightness">Brillantezza: %1$+.1f dB</string>
+    <string name="virtual_surround_tuning_height">Altezza dello schermo: %1$.0f°</string>
+    <string name="virtual_surround_tuning_dialogue">Dialoghi: +%1$d dB</string>
+    <string name="virtual_surround_tuning_close">Chiudi</string>
 </resources>

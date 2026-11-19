@@ -30,6 +30,7 @@
     <item>@string/virtual_surround_room_studio</item>
     <item>@string/virtual_surround_room_room</item>
     <item>@string/virtual_surround_room_hall</item>
+    <item>@string/virtual_surround_room_custom</item>
   </string-array>
 
   <!-- RoomPreset keys -->
@@ -37,6 +38,7 @@
     <item>studio</item>
     <item>room</item>
     <item>hall</item>
+    <item>custom</item>
   </string-array>
 
   <string-array name="virtual_surround_dialogue_entries">

@@ -133,8 +133,9 @@ public class VirtualSurroundEngineTest {
     @Test
     public void centredSourceKeepsItsLevel() {
         for (RoomPreset preset : RoomPreset.values()) {
+            if (preset.params == null) continue;
             for (int channels : new int[]{1, 2}) {
-                final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, preset, channels, 48000);
+                final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, preset.params, channels, 48000);
                 final float[][] out = run(engine, bandNoise(channels, true, 48000 * 2, 0.1f));
                 // Mono noise (0.1 rms) in the middle: about the same level at each ear (+-3 dB)
                 final double rmsLeft = rms(out[0], 48000);
@@ -149,7 +150,7 @@ public class VirtualSurroundEngineTest {
     @Test
     public void leftChannelIsLouderInLeftEar() {
         for (int channels : new int[]{2, 6, 8}) {
-            final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, RoomPreset.LISTENING_ROOM, channels, 44100);
+            final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, RoomPreset.LISTENING_ROOM.params, channels, 44100);
             final float[][] in = new float[channels][44100];
             final Random random = new Random(5);
             for (int i = 0; i < in[0].length; i++) {
@@ -163,7 +164,8 @@ public class VirtualSurroundEngineTest {
     @Test
     public void bassIsFlatForACentredSource() {
         for (RoomPreset preset : RoomPreset.values()) {
-            final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, preset, 2, 48000);
+            if (preset.params == null) continue;
+            final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, preset.params, 2, 48000);
             final int block = engine.getBlockSize();
             final int blocks = 48;
             final float[] response = new float[block * blocks];
@@ -222,8 +224,8 @@ public class VirtualSurroundEngineTest {
 
     /** Output level with a dialogue boost relative to without (rms, after the first block). */
     private static double boostRatio(int channels, float[][] in, float decibels) {
-        final VirtualSurroundEngine plain = new VirtualSurroundEngine(hrirs, RoomPreset.LISTENING_ROOM, channels, 48000);
-        final VirtualSurroundEngine boosted = new VirtualSurroundEngine(hrirs, RoomPreset.LISTENING_ROOM, channels, 48000);
+        final VirtualSurroundEngine plain = new VirtualSurroundEngine(hrirs, RoomPreset.LISTENING_ROOM.params, channels, 48000);
+        final VirtualSurroundEngine boosted = new VirtualSurroundEngine(hrirs, RoomPreset.LISTENING_ROOM.params, channels, 48000);
         boosted.setDialogueBoost(decibels);
         boosted.reset();
         final int skip = plain.getBlockSize();
@@ -231,8 +233,38 @@ public class VirtualSurroundEngineTest {
     }
 
     @Test
+    public void roomParamsRoundTrip() {
+        final RoomParams room = new RoomParams(3.2, 1.7, 0.6, -3, 35, 2, 10);
+        assertEquals(room, RoomParams.parse(room.serialize(), null));
+        assertEquals(RoomPreset.HALL.params, RoomParams.parse("garbage", RoomPreset.HALL.params));
+        // Values are kept in range
+        assertEquals(RoomParams.MAX_DISTANCE, new RoomParams(99, 1, 0.3, 0, 30, 0, 0).distance, 0);
+    }
+
+    @Test
+    public void tunedRoomsWork() {
+        // Extremes of the tuning ranges, elevated front speakers
+        final RoomParams[] rooms = {
+                new RoomParams(RoomParams.MIN_DISTANCE, RoomParams.MIN_SIZE, RoomParams.MIN_REVERB,
+                        RoomParams.MIN_ROOM_LEVEL, RoomParams.MIN_FRONT_WIDTH, RoomParams.MIN_BRIGHTNESS, 20),
+                new RoomParams(RoomParams.MAX_DISTANCE, RoomParams.MAX_SIZE, RoomParams.MAX_REVERB,
+                        RoomParams.MAX_ROOM_LEVEL, RoomParams.MAX_FRONT_WIDTH, RoomParams.MAX_BRIGHTNESS, 10),
+        };
+        for (RoomParams room : rooms) {
+            final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, room, 6, 48000);
+            final float[][] out = run(engine, bandNoise(6, false, 48000, 0.05f));
+            for (float[] channel : out) {
+                for (float v : channel) {
+                    assertTrue(Float.isFinite(v));
+                }
+            }
+            assertTrue(room.toString(), rms(out[0], 1024) > 0.01);
+        }
+    }
+
+    @Test
     public void loudInputIsLimited() {
-        final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, RoomPreset.HALL, 6, 48000);
+        final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, RoomPreset.HALL.params, 6, 48000);
         final float[][] in = new float[6][48000];
         for (int c = 0; c < 6; c++) {
             for (int i = 0; i < in[c].length; i++) {
@@ -250,7 +282,7 @@ public class VirtualSurroundEngineTest {
 
     @Test
     public void bypassGivesTheOriginalStereo() {
-        final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, RoomPreset.STUDIO, 2, 48000);
+        final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, RoomPreset.STUDIO.params, 2, 48000);
         engine.setBypassed(true);
         engine.reset();
         final float[][] in = bandNoise(2, false, engine.getBlockSize() * 4, 0.1f);
@@ -264,7 +296,7 @@ public class VirtualSurroundEngineTest {
 
     @Test
     public void bypassSwitchIsSmooth() {
-        final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, RoomPreset.LISTENING_ROOM, 2, 48000);
+        final VirtualSurroundEngine engine = new VirtualSurroundEngine(hrirs, RoomPreset.LISTENING_ROOM.params, 2, 48000);
         final int block = engine.getBlockSize();
         final float[][] in = new float[2][block];
         final float[] left = new float[block];

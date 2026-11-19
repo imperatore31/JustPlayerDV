@@ -9,6 +9,7 @@ import android.preference.PreferenceManager;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.ui.AspectRatioFrameLayout;
 
+import com.brouken.player.audio.RoomParams;
 import com.brouken.player.audio.RoomPreset;
 import com.brouken.player.dovi.DoviDeviceSupport;
 
@@ -57,6 +58,7 @@ class Prefs {
     private static final String PREF_KEY_VIRTUAL_SURROUND = "virtualSurround";
     private static final String PREF_KEY_VIRTUAL_SURROUND_ROOM = "virtualSurroundRoom";
     private static final String PREF_KEY_VIRTUAL_SURROUND_DIALOGUE = "virtualSurroundDialogue";
+    private static final String PREF_KEY_VIRTUAL_SURROUND_CUSTOM = "virtualSurroundCustom";
 
     public static final String TRACK_DEFAULT = "default";
     public static final String TRACK_DEVICE = "device";
@@ -99,6 +101,8 @@ class Prefs {
     public String virtualSurroundRoom = RoomPreset.LISTENING_ROOM.key;
     /** Dialogue boost of the virtual surround, dB. */
     public int virtualSurroundDialogue = 3;
+    /** Room tuned by the listener ({@link RoomPreset#CUSTOM}). */
+    public RoomParams virtualSurroundCustom = RoomPreset.LISTENING_ROOM.params;
 
     private LinkedHashMap positions;
 
@@ -181,12 +185,30 @@ class Prefs {
         } catch (NumberFormatException e) {
             virtualSurroundDialogue = 3;
         }
+        virtualSurroundCustom = RoomParams.parse(mSharedPreferences.getString(PREF_KEY_VIRTUAL_SURROUND_CUSTOM, null),
+                RoomPreset.LISTENING_ROOM.params);
     }
 
-    /** Room chosen from the player (long press on the virtual surround button). */
+    /** Room chosen from the player (virtual surround tuning). */
     public void updateVirtualSurroundRoom(String room) {
         virtualSurroundRoom = room;
         mSharedPreferences.edit().putString(PREF_KEY_VIRTUAL_SURROUND_ROOM, room).apply();
+    }
+
+    /** Room tuned from the player: becomes the custom room. */
+    public void updateVirtualSurroundCustom(RoomParams room) {
+        virtualSurroundCustom = room;
+        mSharedPreferences.edit().putString(PREF_KEY_VIRTUAL_SURROUND_CUSTOM, room.serialize()).apply();
+    }
+
+    public void updateVirtualSurroundDialogue(int decibels) {
+        virtualSurroundDialogue = decibels;
+        mSharedPreferences.edit().putString(PREF_KEY_VIRTUAL_SURROUND_DIALOGUE, String.valueOf(decibels)).apply();
+    }
+
+    /** The room in use: a preset, or the custom room. */
+    public RoomParams getVirtualSurroundRoomParams() {
+        return RoomPreset.fromKey(virtualSurroundRoom).resolve(virtualSurroundCustom);
     }
 
     public void updateMedia(final Context context, final Uri uri, final String type) {

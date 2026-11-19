@@ -62,28 +62,30 @@ final class BrirGenerator {
     }
 
     /**
-     * @param azimuths speaker azimuths, degrees counter-clockwise from the front (90 = left)
+     * @param azimuths   speaker azimuths, degrees counter-clockwise from the front (90 = left)
+     * @param elevations speaker elevations, degrees (0 = ear height)
      * @return [speaker][ear: 0 left, 1 right][samples] at the sample rate of {@code hrirs}
      */
-    static float[][][] generate(HrirSet hrirs, RoomPreset room, double[] azimuths) {
+    static float[][][] generate(HrirSet hrirs, RoomParams room, double[] azimuths, double[] elevations) {
         final float[][][] out = new float[azimuths.length][][];
         for (int s = 0; s < azimuths.length; s++) {
-            out[s] = generate(hrirs, room, azimuths[s], 0x5EEDL * 31 + room.ordinal() * 7919L + s);
+            out[s] = generate(hrirs, room, azimuths[s], elevations[s], 0x5EEDL * 31 + 7919L * s);
         }
         return out;
     }
 
-    static int length(HrirSet hrirs, RoomPreset room) {
+    static int length(HrirSet hrirs, RoomParams room) {
         return (int) ((room.mixingTime + room.reverbTime) * hrirs.sampleRate) + hrirs.taps;
     }
 
-    private static float[][] generate(HrirSet hrirs, RoomPreset room, double azimuthDegrees, long seed) {
+    private static float[][] generate(HrirSet hrirs, RoomParams room, double azimuthDegrees,
+                                      double elevationDegrees, long seed) {
         final double fs = hrirs.sampleRate;
         final double c = SPEED_OF_SOUND;
         final double width = room.width;
         final double depth = room.length;
         final double height = room.height;
-        final double r0 = room.speakerDistance;
+        final double r0 = room.distance;
         final double volume = width * depth * height;
         final double surface = 2 * (width * depth + width * height + depth * height);
         // Eyring: uniform absorption giving the requested reverberation time
@@ -102,18 +104,21 @@ final class BrirGenerator {
         }
         final double damping = Math.pow(WALL_DAMPING_48K, 48000.0 / fs);
 
-        // Listener near the middle of the room (left to right), facing the front wall (+y)
-        final double lx = width / 2 - room.listenerOffset;
-        final double ly = depth - room.frontWallDistance - r0 * Math.cos(Math.toRadians(30));
+        // Listener near the middle of the room, facing the front wall (+y)
+        final double lx = room.listenerX;
+        final double ly = room.listenerY;
         final double lz = EAR_HEIGHT;
         final double az = Math.toRadians(azimuthDegrees);
+        final double el = Math.toRadians(elevationDegrees);
+        final double r0Horizontal = r0 * Math.cos(el);
         // Left is -x
-        final double sx = lx - r0 * Math.sin(az);
-        final double sy = ly + r0 * Math.cos(az);
-        final double sz = lz;
+        final double sx = lx - r0Horizontal * Math.sin(az);
+        final double sy = ly + r0Horizontal * Math.cos(az);
+        final double sz = lz + r0 * Math.sin(el);
         // Speaker axis: towards the listener
         final double ax = (lx - sx) / r0;
         final double ay = (ly - sy) / r0;
+        final double azAxis = (lz - sz) / r0;
 
         final int length = length(hrirs, room);
         final int taps = hrirs.taps;
@@ -160,7 +165,8 @@ final class BrirGenerator {
                                 if (order > 0) {
                                     // Directivity: angle between the (mirrored) speaker axis and the
                                     // direction from the image source to the listener
-                                    final double cos = ((1 - 2 * u) * ax * -dx + (1 - 2 * v) * ay * -dy) / distance;
+                                    final double cos = ((1 - 2 * u) * ax * -dx + (1 - 2 * v) * ay * -dy
+                                            + (1 - 2 * w) * azAxis * -dz) / distance;
                                     gain *= 0.7 + 0.3 * cos;
                                     gain *= room.reflectionGain;
                                 }
@@ -356,9 +362,11 @@ final class BrirGenerator {
      *
      * @param pairA    front left speaker (or the only speaker)
      * @param pairB    front right speaker, or -1
-     * @param dialogue centre speaker, or -1 to use the front pair
+     * @param dialogue     centre speaker, or -1 to use the front pair
+     * @param brightnessDb extra gain at high frequencies (from 2 kHz, full above 8 kHz)
      */
-    static void equalize(float[][][] responses, int pairA, int pairB, int dialogue, int sampleRate) {
+    static void equalize(float[][][] responses, int pairA, int pairB, int dialogue, int sampleRate,
+                         double brightnessDb) {
         int maxLength = 0;
         for (float[][] pair : responses) {
             maxLength = Math.max(maxLength, pair[0].length);
@@ -419,6 +427,8 @@ final class BrirGenerator {
                 }
                 g += presence;
             }
+            // Brightness: tilt from 2 kHz (none) to 8 kHz (full)
+            g += brightnessDb * (1 - fade(f, 2000, 8000));
             gainDb[k] = g;
             pairGainDb[k] = g + shelfDb * fade(f, 200, 400);
         }

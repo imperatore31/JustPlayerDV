@@ -42,7 +42,7 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
     private static HrirSet hrirs;
 
     private final Context context;
-    private volatile RoomPreset preset;
+    private volatile RoomParams room;
     private volatile boolean userBypassed;
     private volatile boolean headphonesConnected;
     private volatile boolean processing;
@@ -66,27 +66,28 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
     @Nullable
     private Future<VirtualSurroundEngine> pendingEngine;
     @Nullable
-    private RoomPreset pendingPreset;
+    private RoomParams pendingRoom;
     private boolean buildFailed;
     /** Crossfade from the previous engine (or the plain downmix) to {@link #engine}. */
     private boolean swapping;
     @Nullable
     private VirtualSurroundEngine swapFrom;
 
-    public VirtualSurroundAudioProcessor(Context context, RoomPreset preset) {
+    public VirtualSurroundAudioProcessor(Context context, RoomParams room) {
         this.context = context.getApplicationContext();
-        this.preset = preset;
+        this.room = room;
         this.headphonesConnected = AudioRoutes.hasHeadphones(this.context);
     }
 
     // ---- Controls (any thread)
 
-    public void setPreset(RoomPreset preset) {
-        this.preset = preset;
+    /** Changes the room: the new responses are built in the background, then crossfaded in. */
+    public void setRoom(RoomParams room) {
+        this.room = room;
     }
 
-    public RoomPreset getPreset() {
-        return preset;
+    public RoomParams getRoom() {
+        return room;
     }
 
     /** Switches virtual surround off (true) or on (false), for comparison. */
@@ -301,7 +302,7 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
     private void processBlock() {
         pickUpBuiltEngine();
         final VirtualSurroundEngine engine = this.engine;
-        if (engine == null || engine.getPreset() != preset) {
+        if (engine == null || !engine.getRoom().equals(room)) {
             maybeBuildEngine();
         }
         final boolean bypassed = isBypassed();
@@ -340,7 +341,7 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
             return;
         }
         pendingEngine = null;
-        pendingPreset = null;
+        pendingRoom = null;
         VirtualSurroundEngine built = null;
         try {
             built = future.get();
@@ -360,12 +361,12 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
     }
 
     private void maybeBuildEngine() {
-        final RoomPreset wanted = preset;
-        if (buildFailed || channelCount < 1 || (engine != null && engine.getPreset() == wanted)) {
+        final RoomParams wanted = room;
+        if (buildFailed || channelCount < 1 || (engine != null && engine.getRoom().equals(wanted))) {
             return;
         }
         if (pendingEngine != null) {
-            if (pendingPreset == wanted) {
+            if (wanted.equals(pendingRoom)) {
                 return;
             }
             // Another room was asked for meanwhile: the result of this build will be ignored
@@ -373,7 +374,7 @@ public final class VirtualSurroundAudioProcessor extends BaseAudioProcessor {
         }
         final int channels = channelCount;
         final int rate = sampleRate;
-        pendingPreset = wanted;
+        pendingRoom = wanted;
         pendingEngine = BUILDER.submit(() -> new VirtualSurroundEngine(getHrirs(context), wanted, channels, rate));
     }
 
