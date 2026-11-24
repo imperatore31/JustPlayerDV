@@ -46,7 +46,7 @@ DV Player si installa accanto a Just Player, senza sostituirlo.
 Avvia un video, tocca lo schermo e **tieni premuta** l'icona dell'ingranaggio ⚙️ in basso a destra. In fondo all'elenco:
 - **Converti Dolby Vision profilo 7 in 8.1**: attiva di default sui dispositivi che supportano il profilo 8 ma non il 7. Sotto è indicato cosa supporta il dispositivo.
 - **Converti Dolby Vision in HDR10+ (sperimentale)**: attiva di default sui dispositivi con HDR10+ ma senza Dolby Vision; ha la precedenza sulla conversione nel profilo 8.1.
-- **Mostra il formato HDR (stile TV)**: all'avvio di un video mostra per qualche secondo, in alto a sinistra, un'etichetta semitrasparente con il formato in uso: *Dolby Vision*, *HDR10+ original* (metadati HDR10+ del file), *HDR10+ converted* (ricavati dal Dolby Vision), *HDR10* o *HLG*.
+- **Mostra il formato HDR (stile TV)**: all'avvio di un video mostra per qualche secondo, in alto a sinistra, un'etichetta semitrasparente con il formato in uso: *Dolby Vision 8* (o il profilo nativo), *Dolby Vision 8 (7MEL)* / *Dolby Vision 8 (7FEL)* (profilo 7 convertito), *HDR10+ original* (metadati HDR10+ del file), *HDR10+ converted* (ricavati dal Dolby Vision), *HDR10* o *HLG*.
 - **Diagnostica Dolby Vision**: se attiva, alla prima pausa di un video Dolby Vision mostra il decoder usato, la modalità (Dolby Vision, HDR10+ o HDR10) e quanti metadati sono stati convertiti.
 
 ### Limiti
@@ -94,7 +94,7 @@ DV Player installs next to Just Player, it does not replace it.
 Start a video, tap the screen and **long press** the ⚙️ gear icon at the bottom right. At the end of the list:
 - **Convert Dolby Vision profile 7 to 8.1**: enabled by default on devices that support profile 8 but not profile 7. The device capabilities are shown below it.
 - **Convert Dolby Vision to HDR10+ (experimental)**: enabled by default on devices with HDR10+ but without Dolby Vision; takes precedence over the profile 8.1 conversion.
-- **Show the HDR format (TV style)**: when a video starts, a semi-transparent label in the top left corner shows the format in use for a few seconds: *Dolby Vision*, *HDR10+ original* (the file's own HDR10+ metadata), *HDR10+ converted* (derived from Dolby Vision), *HDR10* or *HLG*.
+- **Show the HDR format (TV style)**: when a video starts, a semi-transparent label in the top left corner shows the format in use for a few seconds: *Dolby Vision 8* (or the native profile), *Dolby Vision 8 (7MEL)* / *Dolby Vision 8 (7FEL)* (converted profile 7), *HDR10+ original* (the file's own HDR10+ metadata), *HDR10+ converted* (derived from Dolby Vision), *HDR10* or *HLG*.
 - **Dolby Vision diagnostics**: when enabled, the first pause of a Dolby Vision video shows the decoder in use, the mode (Dolby Vision, HDR10+ or HDR10) and how many RPUs were converted.
 
 ### Limitations

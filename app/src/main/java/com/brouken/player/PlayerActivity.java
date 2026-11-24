@@ -1527,7 +1527,14 @@ public class PlayerActivity extends Activity {
     @Nullable
     private String hdrFormatLabel(Format format) {
         if (MimeTypes.VIDEO_DOLBY_VISION.equals(DoviRenderersFactory.getLastVideoCodecMimeType())) {
-            return "Dolby Vision";
+            if (DoviConvertingExtractorsFactory.isConvertedFormat(format)) {
+                // Profile 7 converted to 8.1: "Dolby Vision 8 (7MEL)" / "Dolby Vision 8 (7FEL)"
+                final DoviSampleConverter converter = DoviConvertingExtractorsFactory.getLastActiveConverter();
+                final DoviRpu.ElType elType = converter != null ? converter.getLastElType() : DoviRpu.ElType.NONE;
+                return "Dolby Vision 8 (7" + (elType != DoviRpu.ElType.NONE ? elType.name() : "") + ")";
+            }
+            final int profile = dolbyVisionProfile(format.codecs);
+            return profile > 0 ? "Dolby Vision " + profile : "Dolby Vision";
         }
         final boolean hevc = MimeTypes.VIDEO_H265.equals(format.sampleMimeType)
                 || MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType);
@@ -1556,6 +1563,22 @@ public class PlayerActivity extends Activity {
             return "HDR10";
         }
         return null;
+    }
+
+    /** Dolby Vision profile from a codecs string such as "dvhe.08.06" or "dav1.10.09", or 0. */
+    private static int dolbyVisionProfile(@Nullable String codecs) {
+        if (codecs == null) {
+            return 0;
+        }
+        final String[] parts = codecs.split("\\.");
+        if (parts.length < 2) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /** Shows the HDR format in the top left corner for a few seconds, like a TV does. */
@@ -1605,7 +1628,7 @@ public class PlayerActivity extends Activity {
         badge.setAlpha(0f);
         badge.setVisibility(View.VISIBLE);
         badge.animate().setStartDelay(0).alpha(1f).setDuration(300).withEndAction(() ->
-                badge.animate().setStartDelay(2500).alpha(0f).setDuration(900)
+                badge.animate().setStartDelay(5000).alpha(0f).setDuration(1200)
                         .withEndAction(() -> badge.setVisibility(View.GONE)).start()).start();
     }
 
